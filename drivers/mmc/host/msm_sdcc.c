@@ -60,7 +60,7 @@
 #define SQN_BUSCLK_TIMEOUT (5 * HZ)
 
 static unsigned int msmsdcc_fmin = 144000;
-static unsigned int msmsdcc_fmax = 50000000;
+static unsigned int msmsdcc_fmax = 49152000;
 static unsigned int msmsdcc_4bit = 1;
 static unsigned int msmsdcc_pwrsave = 1;
 static unsigned int msmsdcc_piopoll = 1;
