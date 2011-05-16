@@ -78,7 +78,7 @@ static struct gpio_event_matrix_info buzz_keypad_matrix_info = {
 		GPIOKPF_REMOVE_PHANTOM_KEYS |
 		GPIOKPF_PRINT_UNMAPPED_KEYS /* |
 		GPIOKPF_PRINT_MAPPED_KEYS */),
-	.detect_phone_status = 1,
+	.detect_phone_status = 0,
 };
 
 static struct gpio_event_direct_entry buzz_keypad_nav_map[] = {
