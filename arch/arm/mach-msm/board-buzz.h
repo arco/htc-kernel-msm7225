@@ -111,5 +111,6 @@ unsigned int buzz_get_skuid(void);
 unsigned buzz_engineerid(void);
 int buzz_init_mmc(unsigned int sys_rev);
 int __init buzz_init_keypad(void);
+int __init buzz_wifi_init(void);
 int __init buzz_panel_init(void);
 #endif /* GUARD */

@@ -1357,6 +1357,7 @@ static void __init buzz_init(void)
 	i2c_register_board_info(0, &i2c_microp_devices, 1);
 
 	buzz_init_keypad();
+	buzz_wifi_init();
 	buzz_panel_init();
 
 	msm_init_pmic_vibrator(3000);

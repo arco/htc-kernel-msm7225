@@ -128,14 +128,11 @@ static unsigned buzz_wifi_update_nvs(char *str)
 	return 0;
 }
 
-static int __init buzz_wifi_init(void)
+int __init buzz_wifi_init(void)
 {
 	int ret;
 
-	if (!machine_is_buzz())
-		return 0;
-
-	printk("%s: start\n", __func__);
+	printk(KERN_INFO "%s: start\n", __func__);
 	buzz_wifi_update_nvs("sd_oobonly=1\n");
 	buzz_wifi_update_nvs("btc_params80=0\n");
 	buzz_wifi_update_nvs("btc_params6=30\n");
@@ -143,5 +140,3 @@ static int __init buzz_wifi_init(void)
 	ret = platform_device_register(&buzz_wifi_device);
         return ret;
 }
-
-device_initcall(buzz_wifi_init);
