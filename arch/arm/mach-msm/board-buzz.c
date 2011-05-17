@@ -66,6 +66,9 @@
 
 #include <mach/board_htc.h>
 #include <mach/msm_serial_hs.h>
+#ifdef CONFIG_SERIAL_MSM_HS_PURE_ANDROID
+#include <mach/bcm_bt_lpm.h>
+#endif
 
 #include "devices.h"
 
@@ -978,10 +981,98 @@ static struct platform_device buzz_flashlight_device = {
 	},
 };
 
+#if defined(CONFIG_SERIAL_MSM_HS) && defined(CONFIG_SERIAL_MSM_HS_PURE_ANDROID)
+static struct msm_serial_hs_platform_data msm_uart_dm1_pdata = {
+	.rx_wakeup_irq = -1,
+	.inject_rx_on_wakeup = 0,
+	.exit_lpm_cb = bcm_bt_lpm_exit_lpm_locked,
+};
+
+static struct bcm_bt_lpm_platform_data bcm_bt_lpm_pdata = {
+	.gpio_wake = BUZZ_GPIO_BT_CHIP_WAKE,
+	.gpio_host_wake = BUZZ_GPIO_BT_HOST_WAKE,
+	.request_clock_off_locked = msm_hs_request_clock_off_locked,
+	.request_clock_on_locked = msm_hs_request_clock_on_locked,
+};
+
+struct platform_device buzz_bcm_bt_lpm_device = {
+	.name = "bcm_bt_lpm",
+	.id = 0,
+	.dev = {
+		.platform_data = &bcm_bt_lpm_pdata,
+	},
+};
+
+#define ATAG_BDADDR 0x43294329  /* bluetooth address tag */
+#define ATAG_BDADDR_SIZE 4
+#define BDADDR_STR_SIZE 18
+
+static char bdaddr[BDADDR_STR_SIZE];
+
+module_param_string(bdaddr, bdaddr, sizeof(bdaddr), 0400);
+MODULE_PARM_DESC(bdaddr, "bluetooth address");
+
+static int __init parse_tag_bdaddr(const struct tag *tag)
+{
+	unsigned char *b = (unsigned char *)&tag->u;
+
+	if (tag->hdr.size != ATAG_BDADDR_SIZE)
+		return -EINVAL;
+
+	snprintf(bdaddr, BDADDR_STR_SIZE, "%02X:%02X:%02X:%02X:%02X:%02X",
+			b[0], b[1], b[2], b[3], b[4], b[5]);
+	printk(KERN_INFO "YoYo--BD_ADDRESS=%s\n", bdaddr);
+
+	return 0;
+}
+
+__tagtable(ATAG_BDADDR, parse_tag_bdaddr);
+
+#elif defined(CONFIG_SERIAL_MSM_HS)
+static struct msm_serial_hs_platform_data msm_uart_dm1_pdata = {
+	.rx_wakeup_irq = MSM_GPIO_TO_INT(BUZZ_GPIO_BT_HOST_WAKE),
+	.inject_rx_on_wakeup = 0,
+	.cpu_lock_supported = 1,
+
+	/* for bcm */
+	.bt_wakeup_pin_supported = 1,
+	.bt_wakeup_pin = BUZZ_GPIO_BT_CHIP_WAKE,
+	.host_wakeup_pin = BUZZ_GPIO_BT_HOST_WAKE,
+};
+
+/* for bcm */
+static char bdaddress[20];
+extern unsigned char *get_bt_bd_ram(void);
+
+static void bt_export_bd_address(void)
+{
+	unsigned char cTemp[6];
+
+	memcpy(cTemp, get_bt_bd_ram(), 6);
+	sprintf(bdaddress, "%02x:%02x:%02x:%02x:%02x:%02x",
+		cTemp[0], cTemp[1], cTemp[2], cTemp[3], cTemp[4], cTemp[5]);
+	printk(KERN_INFO "YoYo--BD_ADDRESS=%s\n", bdaddress);
+}
+
+module_param_string(bdaddress, bdaddress, sizeof(bdaddress), S_IWUSR | S_IRUGO);
+MODULE_PARM_DESC(bdaddress, "BT MAC ADDRESS");
+
+static char bt_chip_id[10] = "bcm4329";
+module_param_string(bt_chip_id, bt_chip_id, sizeof(bt_chip_id), S_IWUSR | S_IRUGO);
+MODULE_PARM_DESC(bt_chip_id, "BT's chip id");
+
+static char bt_fw_version[10] = "v2.0.38";
+module_param_string(bt_fw_version, bt_fw_version, sizeof(bt_fw_version), S_IWUSR | S_IRUGO);
+MODULE_PARM_DESC(bt_fw_version, "BT's fw version");
+#endif
+
 static struct platform_device *devices[] __initdata = {
 	&msm_device_smd,
 	&msm_device_nand,
 	&msm_device_i2c,
+#ifdef CONFIG_SERIAL_MSM_HS_PURE_ANDROID
+	&buzz_bcm_bt_lpm_device,
+#endif
 	&htc_battery_pdev,
 	&msm_camera_sensor_s5k4e1gx,
 	&buzz_rfkill,
@@ -1014,14 +1105,6 @@ module_param_named(charger_en, cpld_charger_en, uint, 0);
 module_param_named(usb_h2w_sw, cpld_usb_h2w_sw, uint, 0);
 module_param_named(disable_uart3, opt_disable_uart3, uint, 0);
 module_param_named(keycaps, keycaps, charp, 0);
-
-static char bt_chip_id[10] = "bcm4329";
-module_param_string(bt_chip_id, bt_chip_id, sizeof(bt_chip_id), S_IWUSR | S_IRUGO);
-MODULE_PARM_DESC(bt_chip_id, "BT's chip id");
-
-static char bt_fw_version[10] = "v2.0.38";
-module_param_string(bt_fw_version, bt_fw_version, sizeof(bt_fw_version), S_IWUSR | S_IRUGO);
-MODULE_PARM_DESC(bt_fw_version, "BT's fw version");
 
 static void buzz_reset(void)
 {
@@ -1092,23 +1175,6 @@ void config_buzz_camera_off_gpios(void)
 		ARRAY_SIZE(camera_off_gpio_table));
 }
 
-/* for bcm */
-static char bdaddress[20];
-extern unsigned char *get_bt_bd_ram(void);
-
-static void bt_export_bd_address(void)
-{
-	unsigned char cTemp[6];
-
-	memcpy(cTemp, get_bt_bd_ram(), 6);
-	sprintf(bdaddress, "%02x:%02x:%02x:%02x:%02x:%02x",
-		cTemp[0], cTemp[1], cTemp[2], cTemp[3], cTemp[4], cTemp[5]);
-	printk(KERN_INFO "YoYo--BD_ADDRESS=%s\n", bdaddress);
-}
-
-module_param_string(bdaddress, bdaddress, sizeof(bdaddress), S_IWUSR | S_IRUGO);
-MODULE_PARM_DESC(bdaddress, "BT MAC ADDRESS");
-
 void config_buzz_proximity_gpios(int on)
 {
 	if (on)
@@ -1167,20 +1233,6 @@ static struct perflock_platform_data buzz_perflock_data = {
 	.table_size = ARRAY_SIZE(buzz_perf_acpu_table),
 };
 
-#ifdef CONFIG_SERIAL_MSM_HS
-static struct msm_serial_hs_platform_data msm_uart_dm1_pdata = {
-	.rx_wakeup_irq = MSM_GPIO_TO_INT(BUZZ_GPIO_BT_HOST_WAKE),
-	.inject_rx_on_wakeup = 0,
-	.cpu_lock_supported = 1,
-
-	/* for bcm */
-	.bt_wakeup_pin_supported = 1,
-	.bt_wakeup_pin = BUZZ_GPIO_BT_CHIP_WAKE,
-	.host_wakeup_pin = BUZZ_GPIO_BT_HOST_WAKE,
-
-};
-#endif
-
 static void __init buzz_init(void)
 {
 	int rc;
@@ -1190,8 +1242,10 @@ static void __init buzz_init(void)
 	printk(KERN_INFO "mfg_mode=%d\n", board_mfg_mode());
 	msm_clock_init();
 
+#ifndef CONFIG_SERIAL_MSM_HS_PURE_ANDROID
 	/* for bcm */
 	bt_export_bd_address();
+#endif
 
 	/*
 	 * Setup common MSM GPIOS
@@ -1222,7 +1276,9 @@ static void __init buzz_init(void)
 
 #ifdef CONFIG_SERIAL_MSM_HS
 	msm_device_uart_dm1.dev.platform_data = &msm_uart_dm1_pdata;
+#ifndef CONFIG_SERIAL_MSM_HS_PURE_ANDROID
 	msm_device_uart_dm1.name = "msm_serial_hs_bcm";	/* for bcm */
+#endif
 	msm_add_serial_devices(3);
 #else
 	msm_add_serial_devices(0);
