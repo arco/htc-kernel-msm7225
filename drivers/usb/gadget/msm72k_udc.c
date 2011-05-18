@@ -559,8 +559,10 @@ static void usb_ept_start(struct msm_endpoint *ept)
 {
 	struct usb_info *ui = ept->ui;
 	struct msm_request *req = ept->req;
-	int i, cnt;
+	struct msm_request *f_req = ept->req;
 	unsigned n = 1 << ept->bit;
+	unsigned info;
+	int reprime_cnt = 0;
 
 	BUG_ON(req->live);
 
@@ -585,32 +587,38 @@ static void usb_ept_start(struct msm_endpoint *ept)
 	ept->head->next = ept->req->item_dma;
 	ept->head->info = 0;
 
+reprime_ept:
 	/* flush buffers before priming ept */
 	dma_coherent_pre_ops();
 
 	/* during high throughput testing it is observed that
 	 * ept stat bit is not set even thoguh all the data
 	 * structures are updated properly and ept prime bit
-	 * is set. To workaround the issue, try to check if
-	 * ept stat bit otherwise try to re-prime the ept
+	 * is set. To workaround the issue, use dTD INFO bit
+	 * to make decision on re-prime or not.
 	 */
-	for (i = 0; i < 5; i++) {
-		writel(n, USB_ENDPTPRIME);
-		for (cnt = 0; cnt < 3000; cnt++) {
-			if (!(readl(USB_ENDPTPRIME) & n) &&
-					(readl(USB_ENDPTSTAT) & n))
-				return;
-			udelay(1);
-		}
-	}
+	writel_relaxed(n, USB_ENDPTPRIME);
+	/* busy wait till endptprime gets clear */
+	while ((readl_relaxed(USB_ENDPTPRIME) & n))
+		;
+	if (readl_relaxed(USB_ENDPTSTAT) & n)
+		return;
 
-	if ((readl(USB_ENDPTPRIME) & n)  && !(readl(USB_ENDPTSTAT) & n)) {
-		USB_ERR("Unable to prime the ept%d%s\n",
-				ept->num,
-				ept->flags & EPT_FLAG_IN ? "in" : "out");
+	dma_coherent_post_ops();
+	info = f_req->item->info;
+	if (info & INFO_ACTIVE) {
+		if (reprime_cnt++ < 3)
+			goto reprime_ept;
+		else
+			pr_err("%s(): ept%d%s prime failed. ept: config: %x"
+				"active: %x next: %x info: %x\n"
+				" req@ %x next: %x info: %x\n",
+				__func__, ept->num,
+				ept->flags & EPT_FLAG_IN ? "in" : "out",
+				ept->head->config, ept->head->active,
+				ept->head->next, ept->head->info,
+				f_req->item_dma, f_req->item->next, info);
 	}
-
-	return;
 }
 
 int usb_ept_queue_xfer(struct msm_endpoint *ept, struct usb_request *_req)
