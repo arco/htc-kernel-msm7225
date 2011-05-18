@@ -930,6 +930,7 @@ static struct curcial_oj_platform_data buzz_oj_data = {
 		10, 10, 10, 10, 10, 9, 9, 9, 9, 9,
 		9, 9, 9, 9, 9, 9, 9, 9, 9, 9},
 	.irq = MSM_uP_TO_INT(12),
+	.device_id = 0x0D,
 };
 
 static struct platform_device buzz_oj = {
