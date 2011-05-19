@@ -59,6 +59,7 @@
 #define BUZZ_GPIO_UART3_RX          (86)
 #define BUZZ_GPIO_UART3_TX          (87)
 #define BUZZ_GPIO_VCM_PWDN          (31)
+#define BUZZ_GPIO_CAM_RST_N         (118)
 #define BUZZ_GPIO_UP_RESET_N        (76)
 #define BUZZ_GPIO_PS_HOLD           (25)
 /* flashlight */

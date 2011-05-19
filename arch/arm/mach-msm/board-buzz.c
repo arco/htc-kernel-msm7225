@@ -366,57 +366,6 @@ static struct platform_device buzz_leds = {
 	},
 };
 
-static struct msm_camera_device_platform_data msm_camera_device_data = {
-	.camera_gpio_on  = config_buzz_camera_on_gpios,
-	.camera_gpio_off = config_buzz_camera_off_gpios,
-	.ioext.mdcphy = MSM_MDC_PHYS,
-	.ioext.mdcsz  = MSM_MDC_SIZE,
-	.ioext.appphy = MSM_CLK_CTL_PHYS,
-	.ioext.appsz  = MSM_CLK_CTL_SIZE,
-};
-
-static struct resource msm_camera_resources[] = {
-	{
-		.start	= MSM_VFE_PHYS,
-		.end	= MSM_VFE_PHYS + MSM_VFE_SIZE - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.start	= INT_VFE,
-		.end	= INT_VFE,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-
-static int flashlight_control(int mode)
-{
-	return aat1271_flashlight_control(mode);
-}
-
-static struct camera_flash_cfg msm_camera_sensor_flash_cfg = {
-	.camera_flash		= flashlight_control,
-	.num_flash_levels	= FLASHLIGHT_NUM,
-	.low_temp_limit		= 5,
-	.low_cap_limit		= 15,
-};
-
-static struct msm_camera_sensor_info msm_camera_sensor_s5k4e1gx_data = {
-	.sensor_name    = "s5k4e1gx",
-	.sensor_reset   = 118,
-	.vcm_pwd        = BUZZ_GPIO_VCM_PWDN,
-	.pdata          = &msm_camera_device_data,
-	.resource       = msm_camera_resources,
-	.num_resources  = ARRAY_SIZE(msm_camera_resources),
-	.flash_cfg	= &msm_camera_sensor_flash_cfg,
-};
-
-static struct platform_device msm_camera_sensor_s5k4e1gx = {
-	.name      = "msm_camera_s5k4e1gx",
-	.dev       = {
-		.platform_data = &msm_camera_sensor_s5k4e1gx_data,
-	},
-};
-
 static struct akm8973_platform_data compass_platform_data = {
 	.layouts = BUZZ_LAYOUTS,
 	.project_name = BUZZ_PROJECT_NAME,
@@ -653,10 +602,6 @@ static struct i2c_board_info i2c_devices[] = {
 		.platform_data = &buzz_ts_3k_data,
 		.irq = MSM_GPIO_TO_INT(BUZZ_GPIO_TP_ATT_N)
 	},
-	{
-		I2C_BOARD_INFO("s5k4e1gx", 0x20 >> 1),   /*5M bayer sensor*/
-		.platform_data = &msm_camera_device_data,
-	},
 };
 
 static struct i2c_board_info i2c_sensor[] = {
@@ -764,6 +709,75 @@ static struct msm_pmem_setting pmem_setting = {
 	.ram_console_start = MSM_RAM_CONSOLE_BASE,
 	.ram_console_size = MSM_RAM_CONSOLE_SIZE,
 };
+
+#ifdef CONFIG_MSM_CAMERA
+
+static int camera_power_on_init(void)
+{
+	int rc=0;
+
+//	printk(KERN_INFO "%s():\n", __func__);
+
+	gpio_request(BUZZ_GPIO_VCM_PWDN, "cam_pwr_on");
+	gpio_direction_output(BUZZ_GPIO_VCM_PWDN, 0);
+	gpio_free(BUZZ_GPIO_VCM_PWDN);
+
+	return rc;
+}
+
+static int flashlight_control(int mode)
+{
+	return aat1271_flashlight_control(mode);
+}
+
+static struct camera_flash_cfg msm_camera_sensor_flash_cfg = {
+	.camera_flash		= flashlight_control,
+	.num_flash_levels	= FLASHLIGHT_NUM,
+	.low_temp_limit		= 5,
+	.low_cap_limit		= 15,
+};
+
+static struct resource msm_camera_resources[] = {
+	{
+		.start	= MSM_VFE_PHYS,
+		.end	= MSM_VFE_PHYS + MSM_VFE_SIZE - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= INT_VFE,
+		.end	= INT_VFE,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static struct msm_camera_device_platform_data msm_camera_device_data = {
+	.camera_gpio_on  = config_buzz_camera_on_gpios,
+	.camera_gpio_off = config_buzz_camera_off_gpios,
+	.ioext.mdcphy = MSM_MDC_PHYS,
+	.ioext.mdcsz  = MSM_MDC_SIZE,
+	.ioext.appphy = MSM_CLK_CTL_PHYS,
+	.ioext.appsz  = MSM_CLK_CTL_SIZE,
+};
+
+static struct msm_camera_sensor_info msm_camera_sensor_s5k4e1gx_data = {
+	.sensor_name    = "s5k4e1gx",
+	.sensor_reset   = BUZZ_GPIO_CAM_RST_N,
+	.vcm_pwd        = BUZZ_GPIO_VCM_PWDN,
+	.camera_power_on = camera_power_on_init,
+	.pdata          = &msm_camera_device_data,
+	.flash_type     = MSM_CAMERA_FLASH_LED,
+	.flash_cfg	= &msm_camera_sensor_flash_cfg,
+	.resource       = msm_camera_resources,
+	.num_resources  = ARRAY_SIZE(msm_camera_resources)
+};
+
+static struct platform_device msm_camera_sensor_s5k4e1gx = {
+	.name      = "msm_camera_s5k4e1gx",
+	.dev       = {
+		.platform_data = &msm_camera_sensor_s5k4e1gx_data,
+	},
+};
+#endif
 
 static ssize_t buzz_virtual_keys_show(struct kobject *kobj,
 			       struct kobj_attribute *attr, char *buf)
@@ -971,16 +985,17 @@ static struct platform_device buzz_oj = {
 		.platform_data	= &buzz_oj_data,
 	}
 };
+
+static uint32_t fl_gpio_table[] = {
+		PCOM_GPIO_CFG(BUZZ_GPIO_FL_TORCH, 0,
+					GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA),
+		PCOM_GPIO_CFG(BUZZ_GPIO_FL_FLASH, 0,
+					GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA),
+};
+
 static void config_buzz_flashlight_gpios(void)
 {
-	static uint32_t buzz_flashlight_gpio_table[] = {
-		PCOM_GPIO_CFG(BUZZ_GPIO_FL_TORCH, 0, GPIO_OUTPUT, GPIO_NO_PULL,
-								GPIO_2MA),
-		PCOM_GPIO_CFG(BUZZ_GPIO_FL_FLASH, 0, GPIO_OUTPUT, GPIO_NO_PULL,
-								GPIO_2MA),
-	};
-	config_gpio_table(buzz_flashlight_gpio_table,
-		ARRAY_SIZE(buzz_flashlight_gpio_table));
+	config_gpio_table(fl_gpio_table, ARRAY_SIZE(fl_gpio_table));
 }
 
 static struct flashlight_platform_data buzz_flashlight_data = {
@@ -988,6 +1003,7 @@ static struct flashlight_platform_data buzz_flashlight_data = {
 	.torch = BUZZ_GPIO_FL_TORCH,
 	.flash = BUZZ_GPIO_FL_FLASH,
 	.flash_duration_ms = 600,
+	.chip_model = AAT1271,
 };
 
 static struct platform_device buzz_flashlight_device = {
@@ -1083,12 +1099,12 @@ MODULE_PARM_DESC(bt_fw_version, "BT's fw version");
 #endif
 
 static struct platform_device *devices[] __initdata = {
-	&msm_device_smd,
-	&msm_device_nand,
-	&msm_device_i2c,
 #ifdef CONFIG_SERIAL_MSM_HS_PURE_ANDROID
 	&buzz_bcm_bt_lpm_device,
 #endif
+	&msm_device_smd,
+	&msm_device_nand,
+	&msm_device_i2c,
 	&htc_battery_pdev,
 	&msm_camera_sensor_s5k4e1gx,
 	&buzz_rfkill,
@@ -1137,6 +1153,12 @@ static uint32_t proximity_off_gpio_table[] = {
 		0, GPIO_INPUT, GPIO_PULL_DOWN, 0) /* PS_VOUT */
 };
 
+static struct i2c_board_info i2c_camera_devices[] = {
+	{
+		I2C_BOARD_INFO("s5k4e1gx", 0x20 >> 1), /*5M samsung bayer sensor driver*/
+	},
+};
+
 static uint32_t camera_off_gpio_table[] = {
 	/* CAMERA */
 	PCOM_GPIO_CFG(0, 0, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_4MA), /* DAT0 */
@@ -1153,11 +1175,10 @@ static uint32_t camera_off_gpio_table[] = {
 	PCOM_GPIO_CFG(10, 0, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_4MA), /* DAT10 */
 	PCOM_GPIO_CFG(11, 0, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_4MA), /* DAT11 */
 	PCOM_GPIO_CFG(12, 0, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_4MA), /* PCLK */
-	PCOM_GPIO_CFG(13, 0, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_4MA),/*HSYNC_IN*/
-	PCOM_GPIO_CFG(14, 0, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_4MA),/*VSYNC_IN*/
-	PCOM_GPIO_CFG(15, 0, GPIO_OUTPUT, GPIO_PULL_DOWN, GPIO_4MA),/*MCLK*/
-
-	PCOM_GPIO_CFG(118, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA),/*CAM_RST*/
+	PCOM_GPIO_CFG(13, 0, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_4MA), /* HSYNC_IN */
+	PCOM_GPIO_CFG(14, 0, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_4MA), /* VSYNC_IN */
+	PCOM_GPIO_CFG(15, 0, GPIO_OUTPUT, GPIO_PULL_DOWN, GPIO_4MA), /* MCLK */
+	PCOM_GPIO_CFG(118, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA), /*CAM_RST*/
 };
 
 static uint32_t camera_on_gpio_table[] = {
@@ -1176,7 +1197,6 @@ static uint32_t camera_on_gpio_table[] = {
 	PCOM_GPIO_CFG(13, 1, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_2MA), /* HSYNC_IN */
 	PCOM_GPIO_CFG(14, 1, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_2MA), /* VSYNC_IN */
 	PCOM_GPIO_CFG(15, 1, GPIO_OUTPUT, GPIO_PULL_DOWN, GPIO_16MA), /* MCLK */
-
 };
 
 void config_buzz_camera_on_gpios(void)
@@ -1355,6 +1375,9 @@ static void __init buzz_init(void)
 
 	}
 	i2c_register_board_info(0, &i2c_microp_devices, 1);
+
+	/* probe camera driver */
+	i2c_register_board_info(0, i2c_camera_devices, ARRAY_SIZE(i2c_camera_devices));
 
 	buzz_init_keypad();
 	buzz_wifi_init();
