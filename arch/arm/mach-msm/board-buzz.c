@@ -180,6 +180,7 @@ static struct platform_device htc_battery_pdev = {
 	},
 };
 static int capella_cm3602_power(int pwr_device, uint8_t enable);
+
 static struct microp_function_config microp_functions[] = {
 	{
 		.name   = "microp_intrrupt",
@@ -191,9 +192,9 @@ static struct microp_function_config microp_functions[] = {
 		.int_pin = 1 << 8,
 	},
 	{
-	.name   = "oj",
-	.category = MICROP_FUNCTION_OJ,
-	.int_pin = 1 << 12,
+		.name   = "oj",
+		.category = MICROP_FUNCTION_OJ,
+		.int_pin = 1 << 12,
 	},
 };
 
@@ -602,9 +603,6 @@ static struct i2c_board_info i2c_devices[] = {
 		.platform_data = &buzz_ts_3k_data,
 		.irq = MSM_GPIO_TO_INT(BUZZ_GPIO_TP_ATT_N)
 	},
-};
-
-static struct i2c_board_info i2c_sensor[] = {
 	{
 		I2C_BOARD_INFO(AKM8973_I2C_NAME, 0x1C),
 		.platform_data = &compass_platform_data,
@@ -833,6 +831,7 @@ static struct platform_device buzz_rfkill = {
 	.id = -1,
 };
 
+/* Proximity Sensor (Capella_CM3602)*/
 static int __capella_cm3602_power(int on)
 {
 	printk(KERN_DEBUG "%s: Turn the capella_cm3602 power %s\n",
@@ -887,8 +886,8 @@ static struct platform_device capella_cm3602 = {
 		.platform_data = &capella_cm3602_pdata
 	}
 };
-
 /* End Proximity Sensor (Capella_CM3602)*/
+
 #define CURCIAL_OJ_MOTION            39
 static void curcial_oj_shutdown (int	enable)
 {
@@ -915,6 +914,7 @@ static void curcial_oj_shutdown (int	enable)
 	}
 
 }
+
 static int curcial_oj_poweron(int on)
 {
 /*
@@ -929,6 +929,7 @@ static int curcial_oj_poweron(int on)
 	return 1;
 }
 #define BUZZ_MICROP_VER	0x05
+
 static void curcial_oj_adjust_xy(uint8_t *data, int16_t *mSumDeltaX, int16_t *mSumDeltaY)
 {
 	int8_t 	deltaX;
@@ -1111,7 +1112,6 @@ static struct platform_device *devices[] __initdata = {
 #ifdef CONFIG_HTC_PWRSINK
 	&buzz_pwr_sink,
 #endif
-/* TODO:JOGALL */
 #ifdef CONFIG_INPUT_CAPELLA_CM3602
 	&capella_cm3602,
 #endif
@@ -1178,7 +1178,7 @@ static uint32_t camera_off_gpio_table[] = {
 	PCOM_GPIO_CFG(13, 0, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_4MA), /* HSYNC_IN */
 	PCOM_GPIO_CFG(14, 0, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_4MA), /* VSYNC_IN */
 	PCOM_GPIO_CFG(15, 0, GPIO_OUTPUT, GPIO_PULL_DOWN, GPIO_4MA), /* MCLK */
-	PCOM_GPIO_CFG(118, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA), /*CAM_RST*/
+	PCOM_GPIO_CFG(118, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA), /* CAM_RST */
 };
 
 static uint32_t camera_on_gpio_table[] = {
@@ -1272,11 +1272,12 @@ static struct perflock_platform_data buzz_perflock_data = {
 static void __init buzz_init(void)
 {
 	int rc;
+	char *cid = NULL;
 	struct kobject *properties_kobj;
 
-	printk("buzz_init() revision=%d\n", system_rev);
-	printk(KERN_INFO "mfg_mode=%d\n", board_mfg_mode());
+	printk("buzz_init() revision = 0x%X\n", system_rev);
 	msm_clock_init();
+	board_get_cid_tag(&cid);
 
 #ifndef CONFIG_SERIAL_MSM_HS_PURE_ANDROID
 	/* for bcm */
@@ -1360,10 +1361,7 @@ static void __init buzz_init(void)
 		pr_err("failed to create board_properties\n");
 
 	msm_device_i2c_init();
-
 	platform_add_devices(devices, ARRAY_SIZE(devices));
-
-	i2c_register_board_info(0, i2c_sensor, ARRAY_SIZE(i2c_sensor));
 	i2c_register_board_info(0, i2c_devices, ARRAY_SIZE(i2c_devices));
 
 	if (system_rev < 3) {
