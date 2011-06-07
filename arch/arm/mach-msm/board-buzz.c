@@ -505,39 +505,12 @@ static struct synaptics_i2c_rmi_platform_data buzz_ts_3k_data[] = {
 	}
 };
 
-static void buzz_disable_usb_charger(void)
-{
-	printk(KERN_INFO "%s\n", __func__);
-	htc_battery_charger_disable();
-}
-
 #ifdef CONFIG_USB_ANDROID
-static uint32_t usb_ID_PIN_input_table[] = {
-	PCOM_GPIO_CFG(BUZZ_GPIO_USB_ID_PIN, 0, GPIO_INPUT, GPIO_PULL_UP, GPIO_4MA),
-};
-
-static uint32_t usb_ID_PIN_ouput_table[] = {
-	PCOM_GPIO_CFG(BUZZ_GPIO_USB_ID_PIN, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_4MA),
-};
-
-void config_buzz_usb_id_gpios(bool output)
-{
-	if (output) {
-		config_gpio_table(usb_ID_PIN_ouput_table,
-			ARRAY_SIZE(usb_ID_PIN_ouput_table));
-		gpio_set_value(BUZZ_GPIO_USB_ID_PIN, 1);
-	} else
-		config_gpio_table(usb_ID_PIN_input_table,
-			ARRAY_SIZE(usb_ID_PIN_input_table));
-}
-
 static struct msm_hsusb_platform_data msm_hsusb_pdata = {
 	.phy_init_seq		= buzz_phy_init_seq,
 	.phy_reset		= buzz_phy_reset,
 	.usb_id_pin_gpio	= BUZZ_GPIO_USB_ID_PIN,
-	.disable_usb_charger	= buzz_disable_usb_charger,
 	.accessory_detect	= 1, /* detect by ID pin gpio */
-	.config_usb_id_gpios	= config_buzz_usb_id_gpios,
 };
 
 static struct usb_mass_storage_platform_data mass_storage_pdata = {
@@ -941,8 +914,8 @@ static void curcial_oj_adjust_xy(uint8_t *data, int16_t *mSumDeltaX, int16_t *mS
 	if (data[1] == 0x80)
 		data[1] = 0x81;
 	if (0) {
-		deltaX = (-1)*((int8_t) data[2]); /*X=2*/
-		deltaY = (-1)*((int8_t) data[1]); /*Y=1*/
+		deltaX = (-1)*((int8_t) data[2]); /* X=2 */
+		deltaY = (-1)*((int8_t) data[1]); /* Y=1 */
 	} else {
 		deltaX = (1)*((int8_t) data[1]);
 		deltaY = (1)*((int8_t) data[2]);
@@ -1150,7 +1123,7 @@ static uint32_t proximity_off_gpio_table[] = {
 
 static struct i2c_board_info i2c_camera_devices[] = {
 	{
-		I2C_BOARD_INFO("s5k4e1gx", 0x20 >> 1), /*5M samsung bayer sensor driver*/
+		I2C_BOARD_INFO("s5k4e1gx", 0x20 >> 1), /* 5M samsung bayer sensor driver */
 	},
 };
 
@@ -1326,7 +1299,6 @@ static void __init buzz_init(void)
 	android_usb_pdata.serial_number = board_serialno();
 	msm_hsusb_pdata.serial_number = board_serialno();
 	msm_device_hsusb.dev.platform_data = &msm_hsusb_pdata;
-	config_buzz_usb_id_gpios(0);
 	platform_device_register(&msm_device_hsusb);
 #ifdef CONFIG_USB_ANDROID_RNDIS
 	platform_device_register(&rndis_device);
@@ -1336,7 +1308,7 @@ static void __init buzz_init(void)
 #endif
 	msm_add_mem_devices(&pmem_setting);
 
-	#ifdef CONFIG_MICROP_COMMON
+#ifdef CONFIG_MICROP_COMMON
 	buzz_microp_init();
 #endif
 
