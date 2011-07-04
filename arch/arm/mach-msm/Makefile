@@ -99,8 +99,9 @@ ifndef CONFIG_QCT_LTE
 obj-$(CONFIG_MSM_SMD) += htc_port_list.o
 obj-$(CONFIG_ARCH_MSM7X30) += rpc_pmapp.o smd_rpcrouter_clients.o
 obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o
-obj-$(CONFIG_MSM_SMD) += smem_log.o socinfo.o
+obj-$(CONFIG_MSM_SMD) += smem_log.o
 obj-$(CONFIG_MSM_SMD) += last_radio_log.o
+obj-$(CONFIG_MSM_SOCINFO) += socinfo.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_device.o
 ifndef CONFIG_ARCH_MSM7X30
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter.o

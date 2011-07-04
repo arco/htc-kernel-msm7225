@@ -29,6 +29,7 @@ config ARCH_QSD8X50
 	select ARCH_MSM_SCORPION
 	select CPU_V7
 	select VERIFY_PERMISSION_FAULT
+
 config ARCH_MSM8X60
 	bool "MSM8X60"
 	select ARCH_MSM_SCORPIONMP
@@ -67,6 +68,11 @@ config  ARCH_MSM_SCORPIONMP
 
 config  MSM_VIC
 	bool
+
+config MSM_SOCINFO
+	bool
+	depends on ARCH_MSM7227 || ARCH_MSM7X30 || ARCH_QSD8X50 || ARCH_MSM8X60 || ARCH_MSM8X60_LTE
+	default y
 
 config MSM_RPM
 	bool "Resource Power Manager"
