@@ -85,7 +85,6 @@ static struct gpio_event_direct_entry buzz_keypad_nav_map[] = {
 	{
 		.gpio = BUZZ_GPIO_POWER_KEY,
 		.code = KEY_POWER,
-		.wakeup = 1,
 	},
 };
 

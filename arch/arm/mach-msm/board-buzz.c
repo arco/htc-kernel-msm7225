@@ -83,95 +83,41 @@
 
 void msm_init_irq(void);
 void msm_init_gpio(void);
-void msm_init_pmic_vibrator(void);
 void config_buzz_camera_on_gpios(void);
 void config_buzz_camera_off_gpios(void);
 #ifdef CONFIG_MICROP_COMMON
 void __init buzz_microp_init(void);
 #endif
+void config_buzz_proximity_gpios(int on);
 static int buzz_phy_init_seq[] = {0x2C, 0x31, 0x20, 0x32, 0x1, 0x0D, 0x1, 0x10, -1};
-#define HSUSB_API_INIT_PHY_PROC	2
-#define HSUSB_API_PROG		0x30000064
+
+#define HSUSB_API_INIT_PHY_PROC 2
+#define HSUSB_API_PROG          0x30000064
 #define HSUSB_API_VERS MSM_RPC_VERS(1, 1)
 
 static void buzz_phy_reset(void)
 {
-	struct msm_rpc_endpoint *usb_ep;
-	int rc;
-	struct hsusb_phy_start_req {
-		struct rpc_request_hdr hdr;
-	} req;
+        struct msm_rpc_endpoint *usb_ep;
+        int rc;
+        struct hsusb_phy_start_req {
+                struct rpc_request_hdr hdr;
+        } req;
 
-	printk(KERN_INFO "msm_hsusb_phy_reset\n");
+        printk(KERN_INFO "msm_hsusb_phy_reset\n");
 
-	usb_ep = msm_rpc_connect(HSUSB_API_PROG, HSUSB_API_VERS, 0);
-	if (IS_ERR(usb_ep)) {
-		printk(KERN_ERR "%s: init rpc failed! error: %ld\n",
-				__func__, PTR_ERR(usb_ep));
-		return;
-	}
-	rc = msm_rpc_call(usb_ep, HSUSB_API_INIT_PHY_PROC,
-			&req, sizeof(req), 5 * HZ);
-	if (rc < 0)
-		printk(KERN_ERR "%s: rpc call failed! (%d)\n", __func__, rc);
+        usb_ep = msm_rpc_connect(HSUSB_API_PROG, HSUSB_API_VERS, 0);
+        if (IS_ERR(usb_ep)) {
+                printk(KERN_ERR "%s: init rpc failed! error: %ld\n",
+                                __func__, PTR_ERR(usb_ep));
+                return;
+        }
+        rc = msm_rpc_call(usb_ep, HSUSB_API_INIT_PHY_PROC,
+                        &req, sizeof(req), 5 * HZ);
+        if (rc < 0)
+                printk(KERN_ERR "%s: rpc call failed! (%d)\n", __func__, rc);
 
-	msm_rpc_close(usb_ep);
+        msm_rpc_close(usb_ep);
 }
-
-#ifdef CONFIG_USB_ANDROID
-static struct msm_hsusb_platform_data msm_hsusb_pdata = {
-	.phy_init_seq		= buzz_phy_init_seq,
-	.phy_reset		= buzz_phy_reset,
-	.usb_id_pin_gpio =  BUZZ_GPIO_USB_ID_PIN,
-};
-
-static struct usb_mass_storage_platform_data mass_storage_pdata = {
-	.nluns		= 1,
-	.vendor		= "HTC",
-	.product	= "Android Phone",
-	.release	= 0x0100,
-};
-
-static struct platform_device usb_mass_storage_device = {
-	.name	= "usb_mass_storage",
-	.id	= -1,
-	.dev	= {
-		.platform_data = &mass_storage_pdata,
-	},
-};
-
-static struct android_usb_platform_data android_usb_pdata = {
-	.vendor_id	= 0x0bb4,
-	.product_id	= 0x0c8b,
-	.version	= 0x0100,
-	.product_name		= "Android Phone",
-	.manufacturer_name	= "HTC",
-	.num_products = ARRAY_SIZE(usb_products),
-	.products = usb_products,
-	.num_functions = ARRAY_SIZE(usb_functions_all),
-	.functions = usb_functions_all,
-};
-
-static struct platform_device android_usb_device = {
-	.name	= "android_usb",
-	.id		= -1,
-	.dev		= {
-		.platform_data = &android_usb_pdata,
-	},
-};
-static void buzz_add_usb_devices(void)
-{
-	android_usb_pdata.products[0].product_id =
-		android_usb_pdata.product_id;
-	android_usb_pdata.serial_number = board_serialno();
-	msm_hsusb_pdata.serial_number = board_serialno();
-	msm_device_hsusb.dev.platform_data = &msm_hsusb_pdata;
-	platform_device_register(&msm_device_hsusb);
-	platform_device_register(&usb_mass_storage_device);
-	platform_device_register(&android_usb_device);
-}
-#endif
-void config_buzz_proximity_gpios(int on);
 
 /* HTC_HEADSET_GPIO Driver */
 static struct htc_headset_gpio_platform_data htc_headset_gpio_data = {
@@ -606,6 +552,77 @@ static struct synaptics_i2c_rmi_platform_data buzz_ts_3k_data[] = {
 	}
 };
 
+static void buzz_disable_usb_charger(void)
+{
+	printk(KERN_INFO "%s\n", __func__);
+	htc_battery_charger_disable();
+}
+
+#ifdef CONFIG_USB_ANDROID
+static uint32_t usb_ID_PIN_input_table[] = {
+	PCOM_GPIO_CFG(BUZZ_GPIO_USB_ID_PIN, 0, GPIO_INPUT, GPIO_PULL_UP, GPIO_4MA),
+};
+
+static uint32_t usb_ID_PIN_ouput_table[] = {
+	PCOM_GPIO_CFG(BUZZ_GPIO_USB_ID_PIN, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_4MA),
+};
+
+void config_buzz_usb_id_gpios(bool output)
+{
+	if (output) {
+		config_gpio_table(usb_ID_PIN_ouput_table,
+			ARRAY_SIZE(usb_ID_PIN_ouput_table));
+		gpio_set_value(BUZZ_GPIO_USB_ID_PIN, 1);
+	} else
+		config_gpio_table(usb_ID_PIN_input_table,
+			ARRAY_SIZE(usb_ID_PIN_input_table));
+}
+
+static struct msm_hsusb_platform_data msm_hsusb_pdata = {
+	.phy_init_seq		= buzz_phy_init_seq,
+	.phy_reset		= buzz_phy_reset,
+	.usb_id_pin_gpio	= BUZZ_GPIO_USB_ID_PIN,
+	.disable_usb_charger	= buzz_disable_usb_charger,
+	.accessory_detect	= 1, /* detect by ID pin gpio */
+	.config_usb_id_gpios	= config_buzz_usb_id_gpios,
+};
+
+static struct usb_mass_storage_platform_data mass_storage_pdata = {
+	.nluns		= 1,
+	.vendor		= "HTC",
+	.product	= "Android Phone",
+	.release	= 0x0100,
+};
+
+static struct platform_device usb_mass_storage_device = {
+	.name	= "usb_mass_storage",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &mass_storage_pdata,
+	},
+};
+
+static struct android_usb_platform_data android_usb_pdata = {
+	.vendor_id	= 0x0bb4,
+	.product_id	= 0x0c8b,
+	.version	= 0x0100,
+	.product_name		= "Android Phone",
+	.manufacturer_name	= "HTC",
+	.num_products = ARRAY_SIZE(usb_products),
+	.products = usb_products,
+	.num_functions = ARRAY_SIZE(usb_functions_all),
+	.functions = usb_functions_all,
+};
+
+static struct platform_device android_usb_device = {
+	.name	= "android_usb",
+	.id		= -1,
+	.dev		= {
+		.platform_data = &android_usb_pdata,
+	},
+};
+#endif
+
 static struct i2c_board_info i2c_devices[] = {
 	{
 		I2C_BOARD_INFO(ATMEL_QT602240_NAME, 0x94 >> 1),
@@ -616,11 +633,6 @@ static struct i2c_board_info i2c_devices[] = {
 		I2C_BOARD_INFO(SYNAPTICS_3K_NAME, 0x20),
 		.platform_data = &buzz_ts_3k_data,
 		.irq = MSM_GPIO_TO_INT(BUZZ_GPIO_TP_ATT_N)
-	},
-	{
-		/*I2C_BOARD_INFO("s5k4b2fx", 0x22 >> 1),*/
-		I2C_BOARD_INFO("s5k4b2fx", 0x22),
-		/* .irq = TROUT_GPIO_TO_INT(TROUT_GPIO_CAM_BTN_STEP1_N), */
 	},
 	{
 		I2C_BOARD_INFO("s5k4e1gx", 0x20 >> 1),   /*5M bayer sensor*/
@@ -1176,6 +1188,7 @@ static void __init buzz_init(void)
 
 	printk("buzz_init() revision=%d\n", system_rev);
 	printk(KERN_INFO "mfg_mode=%d\n", board_mfg_mode());
+	msm_clock_init();
 
 	/* for bcm */
 	bt_export_bd_address();
@@ -1222,9 +1235,20 @@ static void __init buzz_init(void)
 	msm_add_usb_devices(buzz_phy_reset, NULL);
 #endif
 
+#ifdef CONFIG_USB_ANDROID
+	android_usb_pdata.products[0].product_id =
+		android_usb_pdata.product_id;
+	android_usb_pdata.serial_number = board_serialno();
+	msm_hsusb_pdata.serial_number = board_serialno();
+	msm_device_hsusb.dev.platform_data = &msm_hsusb_pdata;
+	config_buzz_usb_id_gpios(0);
+	platform_device_register(&msm_device_hsusb);
+	platform_device_register(&usb_mass_storage_device);
+	platform_device_register(&android_usb_device);
+#endif
 	msm_add_mem_devices(&pmem_setting);
-	msm_init_pmic_vibrator();
-#ifdef CONFIG_MICROP_COMMON
+
+	#ifdef CONFIG_MICROP_COMMON
 	buzz_microp_init();
 #endif
 
@@ -1244,9 +1268,6 @@ static void __init buzz_init(void)
 
 	platform_add_devices(devices, ARRAY_SIZE(devices));
 
-#ifdef CONFIG_USB_ANDROID
-	buzz_add_usb_devices();
-#endif
 	i2c_register_board_info(0, i2c_sensor, ARRAY_SIZE(i2c_sensor));
 	i2c_register_board_info(0, i2c_devices, ARRAY_SIZE(i2c_devices));
 
@@ -1262,6 +1283,8 @@ static void __init buzz_init(void)
 
 	buzz_init_keypad();
 	buzz_panel_init();
+
+	msm_init_pmic_vibrator(3000);
 }
 
 static void __init buzz_fixup(struct machine_desc *desc, struct tag *tags,
@@ -1280,7 +1303,6 @@ static void __init buzz_map_io(void)
 {
 	printk("buzz_init_map_io()\n");
 	msm_map_common_io();
-	msm_clock_init();
 }
 
 MACHINE_START(BUZZ, "buzz")
