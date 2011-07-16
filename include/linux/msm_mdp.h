@@ -133,7 +133,9 @@ struct mdp_img {
 	uint32_t format;
 	uint32_t offset;
 	int memory_id;		/* the file descriptor */
+#ifndef CONFIG_ARCH_MSM_ARM11
 	uint32_t priv;
+#endif
 };
 
 /*
@@ -167,7 +169,9 @@ struct mdp_blit_req {
 	uint32_t alpha;
 	uint32_t transp_mask;
 	uint32_t flags;
+#ifdef CONFIG_MSM_MDP40
 	int sharpening_strength;  /* -127 <--> 127, default 64 */
+#endif
 };
 
 struct mdp_blit_req_list {
@@ -190,8 +194,10 @@ struct msmfb_data {
 	uint32_t offset;
 	int memory_id;
 	int id;
+#ifndef CONFIG_ARCH_MSM_ARM11
 	uint32_t flags;
 	uint32_t priv;
+#endif
 };
 
 #define MSMFB_NEW_REQUEST -1
