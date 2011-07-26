@@ -28,6 +28,7 @@ modules.builtin
 *.gz
 *.bz2
 *.lzma
+*.xz
 *.lzo
 *.patch
 *.gcno
@@ -56,6 +57,7 @@ modules.builtin
 include/config
 include/linux/version.h
 include/generated
+arch/*/include/generated
 
 # stgit generated dirs
 patches-*
@@ -79,6 +81,7 @@ GTAGS
 \#*#
 
 # compressed boot files
+arch/arm/boot/compressed/ashldi3.S
 arch/arm/boot/compressed/lib1funcs.S
 arch/arm/boot/compressed/piggy.gzip
 arch/arm/boot/compressed/vmlinux
