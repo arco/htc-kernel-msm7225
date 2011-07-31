@@ -577,6 +577,33 @@ static ssize_t microp_led_breath_times_store(struct device *dev,
 
 static DEVICE_ATTR(breath_times, 0644, NULL, microp_led_breath_times_store);
 
+static ssize_t microp_led_breath_max_brightness_store(struct device *dev,
+				   struct device_attribute *attr,
+				   const char *buf, size_t count)
+{
+	struct led_classdev *led_cdev;
+	struct microp_led_data *ldata;
+	uint8_t data[2] = {0x00, 0xFF};
+	int val, ret;
+
+	val = -1;
+	sscanf(buf, "%d", &val);
+
+	led_cdev = (struct led_classdev *)dev_get_drvdata(dev);
+	ldata = container_of(led_cdev, struct microp_led_data, ldev);
+
+	data[1] = val;
+	pr_info("%s, data[1] = 0x%x\n", __func__, data[1]);
+
+	ret = microp_i2c_write(MICROP_I2C_WCMD_FACEBOOK_LED_BRIGTHNESS, data, 2);
+	if (ret)
+		pr_err("%s:%s set breath_max_brightnes failed\n", __func__, led_cdev->name);
+
+	return count;
+}
+
+static DEVICE_ATTR(breath_max_brightness, 0644, NULL, microp_led_breath_max_brightness_store);
+
 static int microp_led_probe(struct platform_device *pdev)
 {
 	struct microp_led_platform_data *pdata;
@@ -644,6 +671,12 @@ static int microp_led_probe(struct platform_device *pdev)
 		if (ret < 0) {
 			pr_err("%s: failed on create attr breath times [%d]\n", __func__, i);
 			goto err_register_attr_breath_times;
+		}
+
+		ret = device_create_file(ldata[i].ldev.dev, &dev_attr_breath_max_brightness);
+		if (ret < 0) {
+			pr_err("%s: failed on create attr breath max brightness [%d]\n", __func__, i);
+			goto err_register_attr_breath_max_brightness;
 		}
 	}
 
@@ -754,6 +787,15 @@ err_register_attr_off_timer:
 	}
 	i = pdata->num_leds;
 
+err_register_attr_breath_max_brightness:
+	for (i--; i >= 0; i--) {
+		if (pdata->led_config[i].type != LED_SKEY)
+			continue;
+		device_remove_file(ldata[i].ldev.dev,
+				&dev_attr_breath_max_brightness);
+	}
+	i = pdata->num_leds;
+
 err_register_attr_breath_times:
 	for (i--; i >= 0; i--) {
 		if (pdata->led_config[i].type != LED_SKEY)
@@ -799,8 +841,10 @@ static int __devexit microp_led_remove(struct platform_device *pdev)
 				&dev_attr_blink);
 		} else if (pdata->led_config[i].type == LED_JOGBALL)
 			device_remove_file(ldata[i].ldev.dev, &dev_attr_color);
-		else if (pdata->led_config[i].type == LED_SKEY)
+		else if (pdata->led_config[i].type == LED_SKEY) {
 			device_remove_file(ldata[i].ldev.dev, &dev_attr_breath_times);
+			device_remove_file(ldata[i].ldev.dev, &dev_attr_breath_max_brightness);
+		}
 	}
 	kfree(ldata);
 

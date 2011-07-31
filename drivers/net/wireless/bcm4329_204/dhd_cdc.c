@@ -1301,9 +1301,9 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 
 
 	/* set scanresults_minrssi */
-	ret = -88;
-	bcm_mkiovar("scanresults_minrssi", (char *)&ret, 4, iovbuf, sizeof(iovbuf));
-	dhdcdc_set_ioctl(dhd, 0, WLC_SET_VAR, iovbuf, sizeof(iovbuf));
+	//ret = -88;
+	//bcm_mkiovar("scanresults_minrssi", (char *)&ret, 4, iovbuf, sizeof(iovbuf));
+	//dhdcdc_set_ioctl(dhd, 0, WLC_SET_VAR, iovbuf, sizeof(iovbuf));
 
 	ret = 5;
 	bcm_mkiovar("assoc_retry_max", (char *)&ret, 4, iovbuf, sizeof(iovbuf));

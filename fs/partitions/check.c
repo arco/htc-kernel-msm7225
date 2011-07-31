@@ -45,6 +45,8 @@ extern void md_autodetect_dev(dev_t dev);
 
 int warn_no_part = 1; /*This is ugly: should make genhd removable media aware*/
 
+static struct parsed_partitions *check_state = NULL;
+
 static int (*check_part[])(struct parsed_partitions *) = {
 	/*
 	 * Probe partition formats with tables at disk address 0
@@ -158,24 +160,30 @@ EXPORT_SYMBOL(__bdevname);
 static struct parsed_partitions *
 check_partition(struct gendisk *hd, struct block_device *bdev)
 {
-	struct parsed_partitions *state;
 	int i, res, err;
 
-	state = kzalloc(sizeof(struct parsed_partitions), GFP_KERNEL);
-	if (!state)
-		return NULL;
+	if (!check_state) {
+		check_state = kzalloc(sizeof(struct parsed_partitions), GFP_KERNEL);
+		if (!check_state) {
+			printk(KERN_ERR "%s: page allocation failure. size=%d, order=%d\n",
+				__func__, sizeof(struct parsed_partitions), get_order(sizeof(struct parsed_partitions)));
+			return NULL;
+		}
+		printk("%s: Allocate memory for SD/eMMC card partition description (Once)", __func__);
+	} else
+		memset(check_state, 0, sizeof(struct parsed_partitions));
 
-	state->bdev = bdev;
-	disk_name(hd, 0, state->name);
-	printk(KERN_INFO " %s:", state->name);
-	if (isdigit(state->name[strlen(state->name)-1]))
-		sprintf(state->name, "p");
+	check_state->bdev = bdev;
+	disk_name(hd, 0, check_state->name);
+	printk(KERN_INFO " %s:", check_state->name);
+	if (isdigit(check_state->name[strlen(check_state->name)-1]))
+		sprintf(check_state->name, "p");
 
-	state->limit = disk_max_parts(hd);
+	check_state->limit = disk_max_parts(hd);
 	i = res = err = 0;
 	while (!res && check_part[i]) {
-		memset(&state->parts, 0, sizeof(state->parts));
-		res = check_part[i++](state);
+		memset(&check_state->parts, 0, sizeof(check_state->parts));
+		res = check_part[i++](check_state);
 		if (res < 0) {
 			/* We have hit an I/O error which we don't report now.
 		 	* But record it, and let the others do their job.
@@ -186,8 +194,8 @@ check_partition(struct gendisk *hd, struct block_device *bdev)
 
 	}
 	if (res > 0)
-		return state;
-	if (state->access_beyond_eod)
+		return check_state;
+	if (check_state->access_beyond_eod)
 		err = -ENOSPC;
 	if (err)
 	/* The partition is unrecognized. So report I/O errors if there were any */
@@ -196,7 +204,8 @@ check_partition(struct gendisk *hd, struct block_device *bdev)
 		printk(" unknown partition table\n");
 	else if (warn_no_part)
 		printk(" unable to read partition table\n");
-	kfree(state);
+	/* Alloc once, not free */
+	/* kfree(check_state); */
 	return ERR_PTR(res);
 }
 
@@ -588,11 +597,13 @@ int rescan_partitions(struct gendisk *disk, struct block_device *bdev)
 	struct hd_struct *part;
 	int p, highest, res;
 rescan:
+/* Alloc once, not free */
+/*
 	if (state && !IS_ERR(state)) {
-		kfree(state);
+		vfree(state);
 		state = NULL;
 	}
-
+*/
 	if (bdev->bd_part_count)
 		return -EBUSY;
 	res = invalidate_partition(disk, 0);
@@ -699,7 +710,8 @@ rescan:
 			md_autodetect_dev(part_to_dev(part)->devt);
 #endif
 	}
-	kfree(state);
+	/* Alloc once, not free */
+	/* kfree(state); */
 	return 0;
 }
 

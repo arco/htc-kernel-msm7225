@@ -24,19 +24,24 @@
 #include <linux/uaccess.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
+#include <linux/gpio.h>
 
 #include <mach/msm_smd.h>
 #include <mach/msm_rpcrouter.h>
 #include <mach/msm_iomap.h>
 #include <mach/htc_headset_mgr.h>
 #include <asm/cacheflush.h>
+#include <asm/system.h>
 
 #include "smd_private.h"
+#include "board-marvelc.h"
+#include "board-marvelct.h"
 
 #define ACOUSTIC_IOCTL_MAGIC 'p'
 #define ACOUSTIC_ARM11_DONE	_IOW(ACOUSTIC_IOCTL_MAGIC, 22, unsigned int)
 #define ACOUSTIC_ALLOC_SMEM	_IOW(ACOUSTIC_IOCTL_MAGIC, 23, unsigned int)
 #define SET_VR_MODE		_IOW(ACOUSTIC_IOCTL_MAGIC, 24, unsigned int)
+#define ACOUSTIC_SET_HAC _IOW(ACOUSTIC_IOCTL_MAGIC, 25, unsigned int)
 
 #define HTCRPOG	0x30100002
 #define HTCVERS 0
@@ -114,6 +119,14 @@ int enable_mic_bias(int on)
 
 	if (!is_rpc_connect())
 		return -1;
+
+	if (((__machine_arch_type == MACH_TYPE_MARVELCT) && (system_rev >= 0x80)) ||
+		((__machine_arch_type == MACH_TYPE_MARVELC) && (system_rev >= 0x01))) {
+		if (on)
+			gpio_set_value(MARVELCT_GPIO_MIC_2V5_EN, 1);
+		else
+			gpio_set_value(MARVELCT_GPIO_MIC_2V5_EN, 0);
+	}
 
 	req.on = cpu_to_be32(on);
 	return msm_rpc_call(endpoint, ONCRPC_SET_MIC_BIAS_PROC,
@@ -238,6 +251,7 @@ static long acoustic_ioctl(struct file *file, unsigned int cmd,
 {
 	int rc, reply_value;
 	int vr_arg;
+	int hac_arg;
 	struct vr_mode_req {
 	    struct rpc_request_hdr hdr;
 	    uint32_t enable;
@@ -279,7 +293,29 @@ static long acoustic_ioctl(struct file *file, unsigned int cmd,
 		rc = msm_rpc_call(endpoint, ONCRPC_ENABLE_VR_MODE,
 			&vr_req, sizeof(vr_req), 5*HZ);
 		break;
-
+	case ACOUSTIC_SET_HAC:
+		if (copy_from_user(&hac_arg, (void *)arg, sizeof(hac_arg))) {
+			rc = -EFAULT;
+			break;
+		}
+		mutex_lock(&acoustic_lock);
+		if (hac_arg == 1) {
+			if (hac_enable_flag == 0) {
+				swap_f_table(1);
+				pr_aud_info("Enable HAC\n");
+			}
+			hac_enable_flag = 1;
+		}
+		else {
+			if (hac_enable_flag == 1) {
+				swap_f_table(0);
+				pr_aud_info("Disable HAC\n");
+			}
+			hac_enable_flag = 0;
+		}
+		mutex_unlock(&acoustic_lock);
+		rc = 0;
+		break;
 	default:
 		rc = -EINVAL;
 	}

@@ -200,7 +200,7 @@ int lock_policy_rwsem_read(int cpu);
 int lock_policy_rwsem_write(int cpu);
 void unlock_policy_rwsem_read(int cpu);
 void unlock_policy_rwsem_write(int cpu);
-
+int trylock_policy_rwsem_write(int cpu);
 
 /*********************************************************************
  *                      CPUFREQ DRIVER INTERFACE                     *

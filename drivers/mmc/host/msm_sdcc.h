@@ -166,6 +166,11 @@
 #define MCI_FIFOHALFSIZE (MCI_FIFOSIZE / 2)
 
 #define NR_SG		32
+/*
+ * Set the request timeout to 5secs to allow
+ * bad cards/controller to respond.
+ */
+#define MSM_MMC_REQ_TIMEOUT	5000 /* msecs */
 
 struct clk;
 
@@ -283,6 +288,10 @@ struct msmsdcc_host {
 	struct wake_lock	sdio_suspend_wlock;
 	unsigned int    sdcc_suspending;
 	unsigned int sdcc_irq_disabled;
+	unsigned int	async_irq_during_suspending;
+	struct timer_list req_tout_timer;
+	unsigned int	irq_status[5];
+	unsigned int	irq_counter;
 };
 
 int msmsdcc_set_pwrsave(struct mmc_host *mmc, int pwrsave);

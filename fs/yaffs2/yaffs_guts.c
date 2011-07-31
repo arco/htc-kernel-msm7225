@@ -2669,6 +2669,9 @@ static int yaffs_BlockNotDisqualifiedFromGC(yaffs_Device *dev,
 	if (!dev->isYaffs2)
 		return 1;	/* disqualification only applies to yaffs2. */
 
+	if (!bi->hasShrinkHeader)
+		return 1;	/* can gc */
+
 	yaffs_FindOldestDirtySequence(dev);
 
 	/* Can't do gc of this block if there are any blocks older than this one that have
@@ -2773,7 +2776,7 @@ static int yaffs_FindBlockForGarbageCollection(yaffs_Device *dev,
 	}
 
 	if (dirtiest > 0)
-		dev->nonAggressiveSkip = 2;
+		dev->nonAggressiveSkip = 4;
 
 	return dirtiest;
 }

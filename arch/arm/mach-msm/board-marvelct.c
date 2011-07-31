@@ -111,6 +111,14 @@ static struct htc_headset_microp_platform_data htc_headset_microp_data = {
 	.adc_remote		= {0, 33, 38, 82, 95, 167},
 };
 
+static struct htc_headset_microp_platform_data htc_headset_microp_data_xb = {
+	.remote_int		= 1 << 13,
+	.remote_irq		= MSM_uP_TO_INT(13),
+	.remote_enable_pin	= 0,
+	.adc_channel		= 0x01,
+	.adc_remote		= {0, 33, 38, 102, 152, 224},
+};
+
 static struct platform_device htc_headset_microp = {
 	.name	= "HTC_HEADSET_MICROP",
 	.id	= -1,
@@ -126,9 +134,35 @@ static struct platform_device *headset_devices[] = {
 	/* Please put the headset detection driver on the last */
 };
 
+static struct headset_adc_config htc_headset_mgr_config[] = {
+	{
+		.type = HEADSET_MIC,
+		.adc_max = 942,
+		.adc_min = 649,
+	},
+	{
+		.type = HEADSET_BEATS,
+		.adc_max = 648,
+		.adc_min = 491,
+	},
+	{
+		.type = HEADSET_MIC,
+		.adc_max = 490,
+		.adc_min = 225,
+	},
+	{
+		.type = HEADSET_NO_MIC,
+		.adc_max = 224,
+		.adc_min = 0,
+	},
+};
+
 static struct htc_headset_mgr_platform_data htc_headset_mgr_data = {
+	.driver_flag		= 0,
 	.headset_devices_num	= ARRAY_SIZE(headset_devices),
 	.headset_devices	= headset_devices,
+	.headset_config_num	= 0,
+	.headset_config		= 0,
 };
 
 static struct htc_battery_platform_data htc_battery_pdev_data = {
@@ -273,8 +307,8 @@ struct cy8c_i2c_platform_data marvelct_ts_cy8c_data[] = {
 
 static int marvelct_phy_init_seq[] =
 {
-	0x0C, 0x31,
-	0x08, 0x32,
+	0x2C, 0x31,
+	0x28, 0x32,
 	0x1D, 0x0D,
 	0x1D, 0x10,
 	-1
@@ -337,7 +371,7 @@ static struct platform_device usb_mass_storage_device = {
 
 static struct android_usb_platform_data android_usb_pdata = {
 	.vendor_id	= 0x0bb4,
-	.product_id	= 0x0cb0,
+	.product_id	= 0x0cc3,
 	.version	= 0x0100,
 	.product_name		= "Android Phone",
 	.manufacturer_name	= "HTC",
@@ -963,6 +997,17 @@ static void __init marvelct_init(void)
 						&marvelct_properties_attr_group);
 	if (!properties_kobj || rc)
 		pr_err("failed to create board_properties\n");
+
+	printk(KERN_INFO "[HS_BOARD] (%s) system_rev = %d\n", __func__,
+	       system_rev);
+	if (system_rev >= 1) {
+		htc_headset_microp.dev.platform_data =
+			&htc_headset_microp_data_xb;
+		htc_headset_mgr_data.headset_config_num =
+			ARRAY_SIZE(htc_headset_mgr_config);
+		htc_headset_mgr_data.headset_config = htc_headset_mgr_config;
+		printk(KERN_INFO "[HS_BOARD] (%s) Set MEMS config\n", __func__);
+	}
 
 	/* probe camera driver */
 	i2c_register_board_info(0, i2c_camera_devices, ARRAY_SIZE(i2c_camera_devices));

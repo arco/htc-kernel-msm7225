@@ -117,7 +117,7 @@ static void msm_enqueue(struct msm_device_queue *queue,
 	}
 	list_add_tail(entry, &queue->list);
 	wake_up(&queue->wait);
-	CDBG("%s: woke up\n",__func__);
+	CDBG("%s: woke up %s\n", __func__, queue->name);
 	spin_unlock_irqrestore(&queue->lock, flags);
 }
 
@@ -127,7 +127,7 @@ static void msm_enqueue(struct msm_device_queue *queue,
 	struct msm_queue_cmd *qcmd = 0;					\
 	spin_lock_irqsave(&__q->lock, flags);			\
 	if (!list_empty(&__q->list)) {					\
-		__q->len--;					\
+		__q->len--;									\
 		qcmd = list_first_entry(&__q->list,			\
 				struct msm_queue_cmd, member);		\
 				if (qcmd) {                         \
@@ -296,13 +296,22 @@ static int msm_pmem_frame_ptov_lookup(struct msm_sync *sync,
 	hlist_for_each_entry_safe(region, node, n, &sync->pmem_frames, list) {
 		if (pyaddr == (region->paddr + region->info.y_off) &&
 #ifndef CONFIG_ARCH_MSM7225
+#ifndef CONFIG_ARCH_MSM7227
 				pcbcraddr == (region->paddr +
 						region->info.cbcr_off) &&
+#endif
 #endif
 				region->info.vfe_can_write) {
 			*pmem_region = region;
 			region->info.vfe_can_write = !take_from_vfe;
 #ifdef CONFIG_ARCH_MSM7225
+			if (pcbcraddr != (region->paddr + region->info.cbcr_off)) {
+				pr_err("[CAM]%s cbcr addr = %lx, NOT EQUAL to region->paddr + region->info.cbcr_off = %lx\n",
+					__func__, pcbcraddr, region->paddr + region->info.cbcr_off);
+			}
+#endif
+
+#ifdef CONFIG_ARCH_MSM7227
 			if (pcbcraddr != (region->paddr + region->info.cbcr_off)) {
 				pr_err("[CAM]%s cbcr addr = %lx, NOT EQUAL to region->paddr + region->info.cbcr_off = %lx\n",
 					__func__, pcbcraddr, region->paddr + region->info.cbcr_off);
@@ -593,19 +602,20 @@ static struct msm_queue_cmd *__msm_control(struct msm_sync *sync,
 		int timeout)
 {
 	int rc;
+
 	msm_enqueue(&sync->event_q, &qcmd->list_config);
 
 	if (!queue)
 		return NULL;
+
 	/* wait for config status */
 	rc = wait_event_timeout(
 			queue->wait,
 			!list_empty_careful(&queue->list),
 			timeout);
 	if (list_empty_careful(&queue->list)) {
-		if (!rc){
+		if (!rc)
 			rc = -ETIMEDOUT;
-		}
 		if (rc < 0) {
 			pr_err("[CAM]%s: wait_event error %d\n", __func__, rc);
 			/* qcmd may be still on the event_q, in which case we
@@ -617,6 +627,7 @@ static struct msm_queue_cmd *__msm_control(struct msm_sync *sync,
 //			return ERR_PTR(rc);
 		}
 	}
+
 	qcmd = msm_dequeue(queue, list_control);
 //	BUG_ON(!qcmd);
 
@@ -640,7 +651,6 @@ static struct msm_queue_cmd *__msm_control_nb(struct msm_sync *sync,
 				sizeof(*udata_to_copy) +
 				udata_to_copy->length,
 				GFP_KERNEL);
-	
 	if (!qcmd) {
 		pr_err("[CAM]%s: out of memory\n", __func__);
 		return ERR_PTR(-ENOMEM);
@@ -670,7 +680,7 @@ static int msm_control(struct msm_control_device *ctrl_pmsm,
 	struct msm_queue_cmd qcmd;
 	struct msm_queue_cmd *qcmd_resp = NULL;
 	uint8_t data[50];
-	
+
 	if (copy_from_user(&udata, arg, sizeof(struct msm_ctrl_cmd))) {
 		ERR_COPY_FROM_USER();
 		rc = -EFAULT;
@@ -679,10 +689,11 @@ static int msm_control(struct msm_control_device *ctrl_pmsm,
 
 	uptr = udata.value;
 	udata.value = data;
-	
+
 	atomic_set(&(qcmd.on_heap), 0);
 	qcmd.type = MSM_CAM_Q_CTRL;
 	qcmd.command = &udata;
+
 	if (udata.length) {
 		if (udata.length > sizeof(data)) {
 			pr_err("[CAM]%s: user data too large (%d, max is %d)\n",
@@ -881,12 +892,12 @@ static int msm_get_stats(struct msm_sync *sync, void __user *arg)
 		}
 	}
 	CDBG("%s: returned from wait: %d\n", __func__, rc);
-	
+
 	rc = 0;
 
 	qcmd = msm_dequeue(&sync->event_q, list_config);
-	
 	BUG_ON(!qcmd);
+
 	/* HTC: check qcmd */
 	if (!qcmd) {
 		rc = -EFAULT;
@@ -1523,7 +1534,7 @@ static int msm_put_stats_buffer(struct msm_sync *sync, void __user *arg)
 		} else
 			pr_err("[CAM]%s: vfe_config is NULL\n", __func__);
 	} else {
-		pr_err("[CAM]%s: NULL physical address\n", __func__);
+		pr_info("[CAM]%s: NULL physical address\n", __func__);
 		rc = -EINVAL;
 	}
 

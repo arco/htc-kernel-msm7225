@@ -1535,8 +1535,10 @@ static int s5k4e1gx_sensor_open_init(struct msm_camera_sensor_info *data)
 
 	/* enable mclk first */
 	msm_camio_clk_rate_set(24000000);
+	pr_info("[CAM]s5k4e1gx_sensor_open_init after msm_camio_clk_rate_set");
 
-    data->pdata->camera_gpio_on();
+       data->pdata->camera_gpio_on();
+	pr_info("[CAM]s5k4e1gx_sensor_open_init after camera_gpio_on");
 
 	/* Force reset MIPI sensor for SAGA */
 	/*1126 for improve shutter of MIPI*/

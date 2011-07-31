@@ -114,12 +114,12 @@ static struct htc_headset_microp_platform_data htc_headset_microp_data = {
 	.adc_remote		= {0, 33, 38, 82, 95, 167},
 };
 
-static struct htc_headset_microp_platform_data htc_headset_microp_data_xc = {
+static struct htc_headset_microp_platform_data htc_headset_microp_data_xb03 = {
 	.remote_int		= 1 << 13,
 	.remote_irq		= MSM_uP_TO_INT(13),
 	.remote_enable_pin	= 0,
 	.adc_channel		= 0x01,
-	.adc_remote 	= {0, 33, 38, 102, 133, 204},
+	.adc_remote 	= {0, 33, 38, 102, 114, 204},
 };
 
 static struct platform_device htc_headset_microp = {
@@ -130,11 +130,11 @@ static struct platform_device htc_headset_microp = {
 	},
 };
 
-static struct platform_device htc_headset_microp_xc = {
+static struct platform_device htc_headset_microp_xb03 = {
 	.name	= "HTC_HEADSET_MICROP",
 	.id	= -1,
 	.dev	= {
-		.platform_data	= &htc_headset_microp_data_xc,
+		.platform_data	= &htc_headset_microp_data_xb03,
 	},
 };
 
@@ -145,15 +145,41 @@ static struct platform_device *headset_devices[] = {
 	/* Please put the headset detection driver on the last */
 };
 
-static struct platform_device *headset_devices_xc[] = {
-	&htc_headset_microp_xc,
+static struct platform_device *headset_devices_xb03[] = {
+	&htc_headset_microp_xb03,
 	&htc_headset_gpio,
 	/* Please put the headset detection driver on the last */
 };
 
+static struct headset_adc_config htc_headset_mgr_config[] = {
+	{
+		.type = HEADSET_MIC,
+		.adc_max = 924,
+		.adc_min = 580,
+	},
+	{
+		.type = HEADSET_BEATS,
+		.adc_max = 579,
+		.adc_min = 335,
+	},
+	{
+		.type = HEADSET_MIC,
+		.adc_max = 334,
+		.adc_min = 205,
+	},
+	{
+		.type = HEADSET_NO_MIC,
+		.adc_max = 204,
+		.adc_min = 0,
+	},
+};
+
 static struct htc_headset_mgr_platform_data htc_headset_mgr_data = {
+	.driver_flag		= 0,
 	.headset_devices_num	= ARRAY_SIZE(headset_devices),
 	.headset_devices	= headset_devices,
+	.headset_config_num	= 0,
+	.headset_config		= 0,
 };
 
 static struct htc_battery_platform_data htc_battery_pdev_data = {
@@ -204,7 +230,6 @@ static struct microp_led_config led_config[] = {
 		.name = "sharekey",
 		.type = LED_SKEY,
 		.led_pin = 1 << 1,
-		.init_value = 0xFF,
 		.fade_time = 5,
 	},
 };
@@ -354,7 +379,7 @@ static uint32_t usb_ID_PIN_ouput_table[] = {
 };
 
 static uint32_t usb_ID_PIN_input_table[] = {
-	PCOM_GPIO_CFG(ICONG_GPIO_USB_ID_PIN, 0, GPIO_INPUT, GPIO_PULL_UP, GPIO_4MA),
+	PCOM_GPIO_CFG(ICONG_GPIO_USB_ID_PIN, 0, GPIO_INPUT, GPIO_NO_PULL, GPIO_4MA),
 };
 
 void config_icong_usb_id_gpios(bool output)
@@ -373,6 +398,8 @@ static struct msm_hsusb_platform_data msm_hsusb_pdata = {
 	.phy_reset		= icong_phy_reset,
 	.usb_id_pin_gpio	= ICONG_GPIO_USB_ID_PIN,
 	.disable_usb_charger	= icong_disable_usb_charger,
+	.accessory_detect	= 1, /* detect by ID pin gpio */
+	.config_usb_id_gpios	= config_icong_usb_id_gpios,
 };
 
 static struct usb_mass_storage_platform_data mass_storage_pdata = {
@@ -1114,11 +1141,16 @@ static void __init icong_init(void)
 	/* probe camera driver */
 	i2c_register_board_info(0, i2c_camera_devices, ARRAY_SIZE(i2c_camera_devices));
 
-	/* Update XB03, XC headset ADC table for iphone headset*/
-	if (engineerid == 0x0E) {
-		htc_headset_mgr_data.headset_devices_num = ARRAY_SIZE(
-							   headset_devices_xc);
-		htc_headset_mgr_data.headset_devices = headset_devices_xc;
+	printk(KERN_INFO "[HS_BOARD] (%s) system_rev = %d, engineerid = %d\n",
+	       __func__, system_rev, engineerid);
+	if ((system_rev == 1 && engineerid == 0x0E) || system_rev > 1) {
+		htc_headset_mgr_data.headset_devices_num =
+			ARRAY_SIZE(headset_devices_xb03);
+		htc_headset_mgr_data.headset_devices = headset_devices_xb03;
+		htc_headset_mgr_data.headset_config_num =
+			ARRAY_SIZE(htc_headset_mgr_config);
+		htc_headset_mgr_data.headset_config = htc_headset_mgr_config;
+		printk(KERN_INFO "[HS_BOARD] (%s) Set MEMS config\n", __func__);
 	}
 
 	msm_device_i2c_init();
@@ -1131,7 +1163,7 @@ static void __init icong_init(void)
 
 	icong_wifi_init();
 
-	msm_init_pmic_vibrator(3000);
+	msm_init_pmic_vibrator(2950);
 }
 
 static void __init icong_fixup(struct machine_desc *desc, struct tag *tags,

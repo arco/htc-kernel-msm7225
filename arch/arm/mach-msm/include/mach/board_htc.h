@@ -85,10 +85,12 @@ int __init parse_tag_smi(const struct tag *tags);
 int __init parse_tag_hwid(const struct tag *tags);
 int __init parse_tag_monodie(const struct tag *tags);
 
+int board_get_sku_tag(void);
 void board_get_keycaps_tag(char **);
 void board_get_cid_tag(char **);
 void board_get_carrier_tag(char **);
 void board_get_mid_tag(char **);
+void board_get_qwerty_color_tag(char **);
 int board_emmc_boot(void);
 
 void notify_usb_connected(int online);

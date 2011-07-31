@@ -640,11 +640,11 @@ static struct mt9v113_i2c_reg_conf register_init_tb2[] = {
 	{0x098C, 0xA303, WORD_LEN, 0},
 	{0x0990, 0x00EF, WORD_LEN, 0},
 	{0x098C, 0xA366, WORD_LEN, 0},
-	{0x0990, 0x00C0, WORD_LEN, 0},
+	{0x0990, 0x00A0, WORD_LEN, 0},//c0 Kevin modify for reducing A light yellowish 0427
 	{0x098C, 0xA367, WORD_LEN, 0},
-	{0x0990, 0x0073, WORD_LEN, 0},
+	{0x0990, 0x0096, WORD_LEN, 0},//73 Kevin modify for reducing A light yellowish 0413
 	{0x098C, 0xA368, WORD_LEN, 0},
-	{0x0990, 0x0038, WORD_LEN, 0},
+	{0x0990, 0x0080, WORD_LEN, 0},//38 Kevin modify for reducing A light yellowish 0427
 	/* Gamma Morph brightness setting */
 #ifndef CONFIG_MSM_CAMERA_8X60
 	{0x098C, 0x2B1B, WORD_LEN, 0},

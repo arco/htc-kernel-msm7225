@@ -127,7 +127,7 @@ int mmc_add_host(struct mmc_host *host)
 	WARN_ON((host->caps & MMC_CAP_SDIO_IRQ) &&
 		!host->ops->enable_sdio_irq);
 
-	led_trigger_register_simple(dev_name(&host->class_dev), &host->led);
+	/* led_trigger_register_simple(dev_name(&host->class_dev), &host->led); */
 
 	err = device_add(&host->class_dev);
 	if (err)
@@ -162,7 +162,7 @@ void mmc_remove_host(struct mmc_host *host)
 
 	device_del(&host->class_dev);
 
-	led_trigger_unregister_simple(host->led);
+	/* led_trigger_unregister_simple(host->led); */
 }
 
 EXPORT_SYMBOL(mmc_remove_host);

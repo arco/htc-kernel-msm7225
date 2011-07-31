@@ -68,11 +68,8 @@ static void smd_tty_work_func(struct work_struct *work)
 		}
 
 		avail = smd_read_avail(info->ch);
-		if (avail == 0) {
-			tty->low_latency = 0;
-			tty_flip_buffer_push(tty);
+		if (avail == 0)
 			break;
-		}
 
 		ptr = NULL;
 		avail = tty_prepare_flip_string(tty, &ptr, avail);

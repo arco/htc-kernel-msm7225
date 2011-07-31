@@ -123,20 +123,28 @@ int i2c_himax_write_command(struct i2c_client *client, uint8_t command)
 	return i2c_himax_write(client, command, NULL, 0);
 }
 
-static uint8_t himax_reg_addr;
+static uint8_t himax_command;
 
 static ssize_t himax_register_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	int ret = 0;
-	uint8_t ptr[1] = { 0 };
+	uint8_t data[64], loop_i;
 	struct himax_ts_data *ts_data;
 	ts_data = private_ts;
-	if (i2c_himax_read(ts_data->client, himax_reg_addr, ptr, 1) < 0) {
+	printk(KERN_INFO "%x\n", himax_command);
+	if (i2c_himax_read(ts_data->client, himax_command, data, 64) < 0) {
 		printk(KERN_WARNING "%s: read fail\n", __func__);
 		return ret;
 	}
-	ret += sprintf(buf, "addr: %d, data: %d\n", himax_reg_addr, ptr[0]);
+
+	ret += sprintf(buf, "command: %x\n", himax_command);
+	for (loop_i = 0; loop_i < 64; loop_i++) {
+		ret += sprintf(buf + ret, "0x%2.2X ", data[loop_i]);
+		if ((loop_i % 16) == 15)
+			ret += sprintf(buf + ret, "\n");
+	}
+	ret += sprintf(buf + ret, "\n");
 	return ret;
 }
 
@@ -145,7 +153,7 @@ static ssize_t himax_register_store(struct device *dev,
 {
 	struct himax_ts_data *ts_data;
 	char buf_tmp[4], length = 0;
-	uint8_t write_da[100], command;
+	uint8_t write_da[100];
 
 	ts_data = private_ts;
 	memset(buf_tmp, 0x0, sizeof(buf_tmp));
@@ -155,13 +163,14 @@ static ssize_t himax_register_store(struct device *dev,
 		if (buf[2] == 'x') {
 			uint8_t loop_i, base = 5;
 			memcpy(buf_tmp, buf + 3, 2);
-			command = simple_strtol(buf_tmp, NULL, 16);
+			himax_command = simple_strtol(buf_tmp, NULL, 16);
 			length++;
 			for (loop_i = 0; loop_i < 100; loop_i++) {
 				if (buf[base] == '\n') {
-					i2c_himax_write(ts_data->client, command,
-						&write_da[0], length);
-					printk("CMD: %x, %x, %d\n", command,
+					if (buf[0] == 'w')
+						i2c_himax_write(ts_data->client, himax_command,
+							&write_da[0], length);
+					printk(KERN_INFO "CMD: %x, %x, %d\n", himax_command,
 						write_da[0], length);
 					return count;
 				}
@@ -239,7 +248,7 @@ static int himax_touch_sysfs_init(void)
 		printk(KERN_ERR "TOUCH_ERR: create_file debug_level failed\n");
 		return ret;
 	}
-	himax_reg_addr = 0;
+	himax_command = 0;
 	ret = sysfs_create_file(android_touch_kobj, &dev_attr_register.attr);
 	if (ret) {
 		printk(KERN_ERR "TOUCH_ERR: create_file register failed\n");
@@ -470,9 +479,10 @@ static int himax8250_probe(struct i2c_client *client, const struct i2c_device_id
 	ts->command_c2 = pdata->command_c2;
 
 	ts->cable_config = pdata->cable_config;
-	if (ts->cable_config[0])
-		printk(KERN_INFO "cable_config => 0x%2.2X 0x%2.2X\n",
-			ts->cable_config[0], ts->cable_config[1]);
+	if (!ts->cable_config[0])
+		ts->cable_config = pdata->command_f2;
+	printk(KERN_INFO "cable_config => 0x%2.2X 0x%2.2X\n",
+		ts->cable_config[0], ts->cable_config[1]);
 
 	ts->himax_wq = create_singlethread_workqueue("himax_touch");
 	if (!ts->himax_wq)

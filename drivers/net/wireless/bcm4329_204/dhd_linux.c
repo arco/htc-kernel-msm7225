@@ -999,6 +999,7 @@ dhd_start_xmit(struct sk_buff *skb, struct net_device *net)
 	if (module_remove) {
 		DHD_ERROR(("%s: module removed.", __FUNCTION__));
 		netif_stop_queue(net);
+		dev_kfree_skb(skb); // Add to free skb
 		return -ENODEV;
 	}
 
@@ -1086,6 +1087,12 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt)
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
 	if (module_remove || (!dhd->pub.up)) {
+		for (i = 0; pktbuf && i < numpkt; i++, pktbuf = pnext) {
+			pnext = PKTNEXT(dhdp->osh, pktbuf);
+			PKTSETNEXT(wl->sh.osh, pktbuf, NULL);
+			skb = PKTTONATIVE(dhdp->osh, pktbuf);
+			dev_kfree_skb_any(skb);
+		}
 		if (dhd->pub.up != 1)
 			DHD_ERROR(("%s: dongle not up, skip\n", __FUNCTION__));
 		else

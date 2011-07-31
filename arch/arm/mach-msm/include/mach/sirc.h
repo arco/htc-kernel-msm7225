@@ -42,7 +42,6 @@ struct sirc_regs_t {
 struct sirc_cascade_regs {
 	void    *int_status;
 	unsigned int    cascade_irq;
-	unsigned int    cascade_fiq;
 };
 
 void msm_init_sirc(void);
@@ -56,6 +55,8 @@ void msm_sirc_exit_sleep(void);
 /*
  * Secondary interrupt controller interrupts
  */
+
+#define FIRST_SIRC_IRQ (NR_MSM_IRQS + NR_GPIO_IRQS)
 
 #define INT_UART1                     (FIRST_SIRC_IRQ + 0)
 #define INT_UART2                     (FIRST_SIRC_IRQ + 1)

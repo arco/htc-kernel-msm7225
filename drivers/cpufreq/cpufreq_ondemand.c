@@ -748,7 +748,7 @@ static void dbs_refresh_callback(struct work_struct *unused)
 	struct cpufreq_policy *policy;
 	struct cpu_dbs_info_s *this_dbs_info;
 
-	if (lock_policy_rwsem_write(0) < 0)
+	if (trylock_policy_rwsem_write(0) < 0)
 		return;
 
 	this_dbs_info = &per_cpu(od_cpu_dbs_info, 0);

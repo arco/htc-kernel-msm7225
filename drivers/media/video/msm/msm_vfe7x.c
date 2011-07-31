@@ -142,7 +142,7 @@ static void vfe_7x_ops(void *driver_data, unsigned id, size_t len,
 		rp->evt_msg.type = MSM_CAMERA_EVT;
 		getevent(evt_buf, sizeof(evt_buf));
 		rp->evt_msg.msg_id = evt_buf[0];
-		pr_info("VFE_ADSP_EVENT rp->evt_msg.msg_id:%d",rp->evt_msg.msg_id);
+		pr_info("[CAM]VFE_ADSP_EVENT rp->evt_msg.msg_id:%d",rp->evt_msg.msg_id);
 		resp->vfe_resp(rp, MSM_CAM_Q_VFE_EVT,
 				vfe_syncdata,
 				GFP_ATOMIC);
@@ -157,7 +157,7 @@ static void vfe_7x_ops(void *driver_data, unsigned id, size_t len,
 			__func__, vfe_operationmode, rp->evt_msg.msg_id);
 		switch (rp->evt_msg.msg_id) {
 		case MSG_START_ACK:
-			pr_info("MSG_START_ACK\n");
+			pr_info("[CAM]MSG_START_ACK\n");
 			if (vfe_operationmode == 1)
 				rp->evt_msg.exttype = VFE_MSG_SNAPSHOT;
 			break;
@@ -194,7 +194,7 @@ static void vfe_7x_ops(void *driver_data, unsigned id, size_t len,
 			break;
 
 		case MSG_STOP_ACK:
-			pr_info("MSG_STOP_ACK\n");
+			pr_info("[CAM]MSG_STOP_ACK\n");
 			rp->type = VFE_MSG_GENERAL;
 			stopevent.state = 1;
 			wake_up(&stopevent.wait);

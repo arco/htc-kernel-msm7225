@@ -982,7 +982,8 @@ void diag_usb_legacy_notifier(void *priv, unsigned event,
 
 static void diag_smd_notify(void *ctxt, unsigned event)
 {
-	/*printk(KERN_INFO "%s:\n", __func__);*/
+	if (diag7k_debug_mask)
+	printk(KERN_INFO "%s:\n", __func__);
 	switch (diag_smd_function_mode) {
 #ifdef CONFIG_BTPORT
 	case SMD_FUNC_OPEN_BT:

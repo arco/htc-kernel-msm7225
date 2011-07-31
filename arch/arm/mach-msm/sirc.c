@@ -1,16 +1,18 @@
-/* linux/arch/arm/mach-msm/irq.c
+/* Copyright (c) 2008-2009, Code Aurora Forum. All rights reserved.
  *
- * Copyright (c) 2009 QUALCOMM Incorporated.
- * Copyright (C) 2009 Google, Inc.
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA.
  *
  */
 
@@ -18,10 +20,6 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <asm/irq.h>
-#include <mach/fiq.h>
-#include <mach/msm_iomap.h>
-
-#include "sirc.h"
 
 static unsigned int int_enable;
 static unsigned int wake_enable;
@@ -39,7 +37,6 @@ static struct sirc_cascade_regs sirc_reg_table[] = {
 	{
 		.int_status  = SPSS_SIRC_IRQ_STATUS,
 		.cascade_irq = INT_SIRC_0,
-		.cascade_fiq = INT_SIRC_1,
 	}
 };
 
@@ -123,24 +120,6 @@ static int sirc_irq_set_type(unsigned int irq, unsigned int flow_type)
 	return 0;
 }
 
-#if defined(CONFIG_MSM_FIQ_SUPPORT)
-void sirc_fiq_select(int irq, bool enable)
-{
-	uint32_t mask = 1 << (irq - FIRST_SIRC_IRQ);
-	uint32_t val;
-	unsigned long flags;
-
-	local_irq_save(flags);
-	val = readl(SPSS_SIRC_INT_SELECT);
-	if (enable)
-		val |= mask;
-	else
-		val &= ~mask;
-	writel(val, SPSS_SIRC_INT_SELECT);
-	local_irq_restore(flags);
-}
-#endif
-
 /* Finds the pending interrupt on the passed cascade irq and redrives it */
 static void sirc_irq_handler(unsigned int irq, struct irq_desc *desc)
 {
@@ -166,22 +145,6 @@ static void sirc_irq_handler(unsigned int irq, struct irq_desc *desc)
 	desc->chip->ack(irq);
 }
 
-void msm_sirc_enter_sleep(void)
-{
-	save_type     = readl(sirc_regs.int_type);
-	save_polarity = readl(sirc_regs.int_polarity);
-	writel(wake_enable, sirc_regs.int_enable);
-	return;
-}
-
-void msm_sirc_exit_sleep(void)
-{
-	writel(save_type, sirc_regs.int_type);
-	writel(save_polarity, sirc_regs.int_polarity);
-	writel(int_enable, sirc_regs.int_enable);
-	return;
-}
-
 static struct irq_chip sirc_irq_chip = {
 	.name      = "sirc",
 	.ack       = sirc_irq_ack,
@@ -198,7 +161,7 @@ void __init msm_init_sirc(void)
 	int_enable = 0;
 	wake_enable = 0;
 
-	for (i = FIRST_SIRC_IRQ; i < FIRST_SIRC_IRQ + NR_SIRC_IRQS; i++) {
+	for (i = FIRST_SIRC_IRQ; i < LAST_SIRC_IRQ; i++) {
 		set_irq_chip(i, &sirc_irq_chip);
 		set_irq_handler(i, handle_edge_irq);
 		set_irq_flags(i, IRQF_VALID);
@@ -208,10 +171,6 @@ void __init msm_init_sirc(void)
 		set_irq_chained_handler(sirc_reg_table[i].cascade_irq,
 					sirc_irq_handler);
 		set_irq_wake(sirc_reg_table[i].cascade_irq, 1);
-#if defined(CONFIG_MSM_FIQ_SUPPORT)
-		msm_fiq_select(sirc_reg_table[i].cascade_fiq);
-		msm_fiq_enable(sirc_reg_table[i].cascade_fiq);
-#endif
 	}
 	return;
 }

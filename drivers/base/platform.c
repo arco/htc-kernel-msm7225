@@ -482,6 +482,11 @@ static void platform_drv_shutdown(struct device *_dev)
  */
 int platform_driver_register(struct platform_driver *drv)
 {
+	if(drv==NULL){
+		printk(KERN_ERR
+		"platform_driver_register: drv NULL\n");
+		return -1;
+	}
 	drv->driver.bus = &platform_bus_type;
 	if (drv->probe)
 		drv->driver.probe = platform_drv_probe;

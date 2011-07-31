@@ -211,10 +211,11 @@ static unsigned long jiffies_last_scan;
 static signed long jiffies_scan_wait;
 /* enables or disables the task stacks scanning */
 static int kmemleak_stack_scan = 1;
-/* disable kmemleak by default */
-static int kmemleak_default = 0;
 /* protects the memory scanning, parameters and debug/kmemleak file access */
 static DEFINE_MUTEX(scan_mutex);
+/* setting kmemleak=on, will set this var, skipping the disable */
+static int kmemleak_skip_disable;
+
 
 /*
  * Early object allocation/freeing logging. Kmemleak is initialized after the
@@ -403,7 +404,9 @@ static struct kmemleak_object *lookup_object(unsigned long ptr, int alias)
 		object = prio_tree_entry(node, struct kmemleak_object,
 					 tree_node);
 		if (!alias && object->pointer != ptr) {
-			kmemleak_warn("Found object by alias");
+			pr_warning("Found object by alias at 0x%08lx\n", ptr);
+			dump_stack();
+			dump_object_info(object);
 			object = NULL;
 		}
 	} else
@@ -702,7 +705,7 @@ static void paint_ptr(unsigned long ptr, int color)
 }
 
 /*
- * Make a object permanently as gray-colored so that it can no longer be
+ * Mark an object permanently as gray-colored so that it can no longer be
  * reported as a leak. This is used in general to mark a false positive.
  */
 static void make_gray_object(unsigned long ptr)
@@ -845,10 +848,19 @@ out:
 	rcu_read_unlock();
 }
 
-/*
- * Memory allocation function callback. This function is called from the
- * kernel allocators when a new block is allocated (kmem_cache_alloc, kmalloc,
- * vmalloc etc.).
+/**
+ * kmemleak_alloc - register a newly allocated object
+ * @ptr:	pointer to beginning of the object
+ * @size:	size of the object
+ * @min_count:	minimum number of references to this object. If during memory
+ *		scanning a number of references less than @min_count is found,
+ *		the object is reported as a memory leak. If @min_count is 0,
+ *		the object is never reported as a leak. If @min_count is -1,
+ *		the object is ignored (not scanned and not reported as a leak)
+ * @gfp:	kmalloc() flags used for kmemleak internal memory allocations
+ *
+ * This function is called from the kernel allocators when a new object
+ * (memory block) is allocated (kmem_cache_alloc, kmalloc, vmalloc etc.).
  */
 void __ref kmemleak_alloc(const void *ptr, size_t size, int min_count,
 			  gfp_t gfp)
@@ -862,9 +874,12 @@ void __ref kmemleak_alloc(const void *ptr, size_t size, int min_count,
 }
 EXPORT_SYMBOL_GPL(kmemleak_alloc);
 
-/*
- * Memory freeing function callback. This function is called from the kernel
- * allocators when a block is freed (kmem_cache_free, kfree, vfree etc.).
+/**
+ * kmemleak_free - unregister a previously registered object
+ * @ptr:	pointer to beginning of the object
+ *
+ * This function is called from the kernel allocators when an object (memory
+ * block) is freed (kmem_cache_free, kfree, vfree etc.).
  */
 void __ref kmemleak_free(const void *ptr)
 {
@@ -877,9 +892,14 @@ void __ref kmemleak_free(const void *ptr)
 }
 EXPORT_SYMBOL_GPL(kmemleak_free);
 
-/*
- * Partial memory freeing function callback. This function is usually called
- * from bootmem allocator when (part of) a memory block is freed.
+/**
+ * kmemleak_free_part - partially unregister a previously registered object
+ * @ptr:	pointer to the beginning or inside the object. This also
+ *		represents the start of the range to be freed
+ * @size:	size to be unregistered
+ *
+ * This function is called when only a part of a memory block is freed
+ * (usually from the bootmem allocator).
  */
 void __ref kmemleak_free_part(const void *ptr, size_t size)
 {
@@ -892,9 +912,12 @@ void __ref kmemleak_free_part(const void *ptr, size_t size)
 }
 EXPORT_SYMBOL_GPL(kmemleak_free_part);
 
-/*
- * Mark an already allocated memory block as a false positive. This will cause
- * the block to no longer be reported as leak and always be scanned.
+/**
+ * kmemleak_not_leak - mark an allocated object as false positive
+ * @ptr:	pointer to beginning of the object
+ *
+ * Calling this function on an object will cause the memory block to no longer
+ * be reported as leak and always be scanned.
  */
 void __ref kmemleak_not_leak(const void *ptr)
 {
@@ -907,10 +930,14 @@ void __ref kmemleak_not_leak(const void *ptr)
 }
 EXPORT_SYMBOL(kmemleak_not_leak);
 
-/*
- * Ignore a memory block. This is usually done when it is known that the
- * corresponding block is not a leak and does not contain any references to
- * other allocated memory blocks.
+/**
+ * kmemleak_ignore - ignore an allocated object
+ * @ptr:	pointer to beginning of the object
+ *
+ * Calling this function on an object will cause the memory block to be
+ * ignored (not scanned and not reported as a leak). This is usually done when
+ * it is known that the corresponding block is not a leak and does not contain
+ * any references to other allocated memory blocks.
  */
 void __ref kmemleak_ignore(const void *ptr)
 {
@@ -923,8 +950,16 @@ void __ref kmemleak_ignore(const void *ptr)
 }
 EXPORT_SYMBOL(kmemleak_ignore);
 
-/*
- * Limit the range to be scanned in an allocated memory block.
+/**
+ * kmemleak_scan_area - limit the range to be scanned in an allocated object
+ * @ptr:	pointer to beginning or inside the object. This also
+ *		represents the start of the scan area
+ * @size:	size of the scan area
+ * @gfp:	kmalloc() flags used for kmemleak internal memory allocations
+ *
+ * This function is used when it is known that only certain parts of an object
+ * contain references to other objects. Kmemleak will only scan these areas
+ * reducing the number false negatives.
  */
 void __ref kmemleak_scan_area(const void *ptr, size_t size, gfp_t gfp)
 {
@@ -937,8 +972,14 @@ void __ref kmemleak_scan_area(const void *ptr, size_t size, gfp_t gfp)
 }
 EXPORT_SYMBOL(kmemleak_scan_area);
 
-/*
- * Inform kmemleak not to scan the given memory block.
+/**
+ * kmemleak_no_scan - do not scan an allocated object
+ * @ptr:	pointer to beginning of the object
+ *
+ * This function notifies kmemleak not to scan the given memory block. Useful
+ * in situations where it is known that the given object does not contain any
+ * references to other objects. Kmemleak will not scan such objects reducing
+ * the number of false negatives.
  */
 void __ref kmemleak_no_scan(const void *ptr)
 {
@@ -1605,6 +1646,31 @@ static void kmemleak_disable(void)
 	pr_info("Kernel memory leak detector disabled\n");
 }
 
+#if 1
+/*
+ * Allow boot-time kmemleak disabling (disabled by default).
+ */
+#include <mach/board.h>
+#define MODULE_NAME "kmemleak"
+static int kmemleak_boot_config(char *str)
+{
+	unsigned kernel_flag;
+
+	if (!str)
+		return -EINVAL;
+
+	kernel_flag = simple_strtoul(str, NULL, 16);
+	pr_info(MODULE_NAME ": %s(): get kernel_flag=0x%x\n", __func__, kernel_flag);
+
+	/* kernel_flag <-> kmemleak_boot_config mapping */
+	if (kernel_flag & BIT4)
+		kmemleak_skip_disable = 1;
+	else
+		kmemleak_disable();
+	return 0;
+}
+early_param("kernelflag", kmemleak_boot_config);
+#else
 /*
  * Allow boot-time kmemleak disabling (enabled by default).
  */
@@ -1612,14 +1678,16 @@ static int kmemleak_boot_config(char *str)
 {
 	if (!str)
 		return -EINVAL;
-	if (strcmp(str, "on") == 0)
-		kmemleak_default = 1;
-	/* disable kmemleak by default */
-	else
+	if (strcmp(str, "off") == 0)
 		kmemleak_disable();
+	else if (strcmp(str, "on") == 0)
+		kmemleak_skip_disable = 1;
+	else
+		return -EINVAL;
 	return 0;
 }
 early_param("kmemleak", kmemleak_boot_config);
+#endif
 
 /*
  * Kmemleak initialization.
@@ -1629,7 +1697,7 @@ void __init kmemleak_init(void)
 	int i;
 	unsigned long flags;
 
-	if (!kmemleak_default) {
+	if (!kmemleak_skip_disable) {
 		kmemleak_disable();
 		return;
 	}

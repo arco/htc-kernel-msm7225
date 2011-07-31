@@ -25,6 +25,7 @@
 #include <asm/hardware/cache-l2x0.h>
 
 #define CACHE_LINE_SIZE		32
+extern int board_mfg_mode(void);
 
 static void __iomem *l2x0_base;
 static uint32_t aux_ctrl_save;
@@ -187,7 +188,8 @@ void __init l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
 		outer_cache.flush_range = l2x0_flush_range_atomic;
 		printk(KERN_INFO "L210 cache controller enabled\n");
 	}
-
+// add a screen out method for Cha and ICNG 800Mhz L2 cache issue.
+		l2x0_cache_flush_all();
 }
 
 void l2x0_suspend(void)

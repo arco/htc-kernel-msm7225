@@ -163,7 +163,7 @@ static int sdio_enable_wide(struct mmc_card *card)
 		ctrl |= SDIO_BUS_WIDTH_8BIT;
 	} else {
 		width = MMC_BUS_WIDTH_4;
-	ctrl |= SDIO_BUS_WIDTH_4BIT;
+		ctrl |= SDIO_BUS_WIDTH_4BIT;
 	}
 
 	ret = mmc_io_rw_direct(card, 1, 0, SDIO_CCCR_IF, ctrl, NULL);

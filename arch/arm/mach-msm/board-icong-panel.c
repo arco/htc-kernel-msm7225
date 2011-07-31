@@ -40,6 +40,9 @@
 #endif
 
 #define DEFAULT_BRIGHTNESS 100
+#define PWM_USER_DEF 143
+#define PWM_USER_MIN 30
+#define PWM_USER_MAX 255
 
 static struct samsung_t {
 	struct led_classdev lcd_backlight;
@@ -137,7 +140,7 @@ static const struct mddi_cmd sharp_init_cmd_table[] = {
 		0x00, 0x00, 0x00),
 	LCM_CMD(0xf5, 0, 0x03, 0x11, 0x06, 0x00, 0x00,
 		0x1f, 0x00, 0x00),
-	LCM_CMD(0xcd, 0, 0x66, 0x15, 0x00, 0x00),
+	LCM_CMD(0xcd, 0, 0x5b, 0x15, 0x00, 0x00),
 	LCM_CMD(0x11, 160, 0x00, 0x00, 0x00, 0x00),
 	LCM_CMD(0x29, 0, 0x00, 0x00, 0x00, 0x00),
 };
@@ -171,7 +174,7 @@ static struct mddi_cmd tpo_init_cmd_table[] = {
 	LCM_CMD(0xef, 0, 0x00, 0x00, 0x00, 0x00),
 	LCM_CMD(0x2c, 40, 0x00, 0x00, 0x00, 0x00),
 	LCM_CMD(0x53, 0, 0x24, 0x00, 0x00, 0x00),
-	LCM_CMD(0xcd, 0, 0x66, 0x15, 0x00, 0x00),
+	LCM_CMD(0xcd, 0, 0x5b, 0x15, 0x00, 0x00),
 	LCM_CMD(0x11, 120, 0x00, 0x00, 0x00, 0x00),
 	LCM_CMD(0x29, 0, 0x00, 0x00, 0x00, 0x00),
 };
@@ -195,28 +198,29 @@ static int
 icong_panel_shrink(int brightness)
 {
 	int panel_id = -1;
+	unsigned int panel_def, panel_min, panel_max;
 	panel_id = gpio_get_value(ICONG_GPIO_LCD_ID0) |
 	           (gpio_get_value(ICONG_GPIO_LCD_ID1) << 1);
 	if (panel_id == 0) {
-		if (brightness <= 143) {
-			if (brightness == 0)
-				brightness = 0;
-			else if (brightness <= 30)
-				brightness = 9;
-			else
-				brightness = 123 * (brightness - 30) / 113 + 9;
-		} else
-			brightness = 123 * (brightness - 143) / 112 + 132;
+		panel_def = 133;
+		panel_min = 8;
+		panel_max = 255;
 	} else {
-		if (brightness <= 143) {
-			if (brightness == 0)
-				brightness = 0;
-			else if (brightness <= 30)
-				brightness = 9;
-			else
-				brightness = 106 * (brightness - 30) / 113 + 9;
-		} else
-			brightness = 115 * (brightness - 143) / 112 + 115;
+		panel_def = 120;
+		panel_min = 8;
+		panel_max = 230;
+	}
+	if (brightness <= PWM_USER_DEF) {
+		if (brightness == 0)
+			return 0;
+		else if (brightness <= PWM_USER_MIN)
+			brightness = panel_min;
+		else
+			brightness = (panel_def - panel_min) * (brightness - PWM_USER_MIN)
+					/ (PWM_USER_DEF - PWM_USER_MIN) + panel_min;
+	} else {
+		brightness = (panel_max - panel_def) * (brightness - PWM_USER_DEF)
+				/ (PWM_USER_MAX - PWM_USER_DEF) + panel_def;
 	}
 
 	return brightness;
@@ -342,8 +346,8 @@ icong_panel_unblank(struct msm_mddi_bridge_platform_data *bridge_data,
 {
 	B(KERN_DEBUG "%s: enter.\n", __func__);
 
+	hr_msleep(50);
 	atomic_set(&lcm_init_done, 1);
-	mdelay(50);
 	icong_backlight_switch(client_data, LED_FULL);
 	return 0;
 }

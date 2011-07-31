@@ -35,7 +35,7 @@ struct himax_i2c_platform_data {
 	uint8_t command_6b[11];
 	uint8_t command_6c[11];
 	uint8_t command_6d[11];
-	uint8_t command_c9[36];
+	uint8_t command_c9[40];
 	uint8_t command_cb[11];
 	uint8_t command_d4[4];
 	uint8_t command_b2[49];

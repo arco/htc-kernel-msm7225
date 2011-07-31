@@ -221,10 +221,15 @@ static irqreturn_t gpio_event_input_irq_handler(int irq, void *dev_id)
 	const struct gpio_event_direct_entry *key_entry;
 	unsigned long irqflags;
 
-	if (!ds->use_irq)
+	if (!ds->use_irq) {
+		KEY_LOGI("GPIO_Input_ISR : %d, return IRQ_HANDLED;\n", ds->use_irq);
 		return IRQ_HANDLED;
+	}
 
 	key_entry = &ds->info->keymap[keymap_index];
+
+	if (key_entry->code == KEY_POWER)
+		KEY_LOGI("GPIO_Input_ISR : (0x%x, %d)\n", ks->debounce, ds->debounce_count);
 
 	if (ds->info->debounce_time.tv64) {
 		spin_lock_irqsave(&ds->irq_lock, irqflags);

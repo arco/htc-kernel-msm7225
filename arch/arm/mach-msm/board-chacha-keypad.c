@@ -164,7 +164,7 @@ static void chacha_direct_inputs_gpio(void)
 		PCOM_GPIO_CFG(CHACHA_POWER_KEY, 0, GPIO_INPUT, GPIO_PULL_UP,
 								GPIO_4MA),
 		PCOM_GPIO_CFG(CHACHA_GPIO_KEY_DIRECT, 0, GPIO_INPUT,
-						GPIO_NO_PULL, GPIO_2MA),
+						GPIO_PULL_UP, GPIO_2MA),
 	};
 
 	config_gpio_table(matirx_inputs_gpio_table,
@@ -227,21 +227,23 @@ static struct platform_device chacha_reset_keys_device = {
 	.dev.platform_data = &chacha_reset_keys_pdata,
 };
 
-char *SKU_WWE = "(HTC__001),(HTC__016),(HTC__032),(VIRGI001),(HTC__E11),"\
-		"(H3G__001),(O2___001),(ORANG001),(ORANG309),(ORANGB10),(T-MOB005),(VODAP001),(VODAPE17)";
-char *SKU_ELL = "(VODAP006)";
+char *SKU_WWE = "(HTC__001),(HTC__016),(HTC__032),(VIRGI001),(HTC__E11),(HTC__038),"\
+		"(H3G__001),(O2___001),(ORANG001),(ORANGB10),(T-MOB005),(VODAP001),(VODAPE17),(VODAP006)";
+char *SKU_ELL = "(HTC__N34)";
 char *SKU_FRA = "(HTC__203),(HTC__247),(ORANG202),(VODAP203)";
 char *SKU_ARA = "(HTC__J15)";
-char *SKU_ESN = "(HTC__304),(VODAP304),(VODAPD18)";
+char *SKU_ESN = "(HTC__304),(VODAP304),(VODAPD18),(BSTAR301),(ORANG309)";
 char *SKU_GER = "(HTC__102),(O2___102),(ORANG216),(VODAP102),(VODAP110),(VODAP120)";
-char *SKU_ITA = "(HTC__405)";
+char *SKU_ITA = "(HTC__405),(TIM__401)";
 char *SKU_RUS = "(HTC__A07)";
 char *SKU_HK = "";
 char *SKU_NOR = "(HTC__Y13)";
 char *SKU_TUR = "(HTC__M27)";
-char *SKU_BOPOMO = "(HTC_621)";
-char *SKU_CN = "";
+char *SKU_BOPOMO = "(HTC__621)";
+char *SKU_CN = "HTCCN701";
 char *SKU_AW = "(CWS__001)";
+char *SKU_THAI= "(HTC__053)";
+char *SKU_STROKE_ENG = "(HTC__044),(HTC__622)";
 
 int __init chacha_init_keypad(void)
 {
@@ -324,6 +326,15 @@ int __init chacha_init_keypad(void)
 
 			chacha_keymap[KEYMAP_INDEX(4, 3)] = KEY_F15;
 			chacha_keypad_data.name = "chacha-keypad-aw";
+
+		} else if (strstr(SKU_THAI, get_cid) != NULL) {
+
+			chacha_keymap[KEYMAP_INDEX(4, 3)] = KEY_F15;
+			chacha_keypad_data.name = "chacha-keypad-tai";
+
+		} else if (strstr(SKU_STROKE_ENG, get_cid) != NULL) {
+
+			chacha_keypad_data.name = "chacha-keypad-steng";
 
 		} else {
 

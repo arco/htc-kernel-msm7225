@@ -23,6 +23,7 @@
 #include <linux/miscdevice.h>
 
 #include <linux/msm_audio.h>
+#include <linux/dma-mapping.h>
 
 #include <asm/atomic.h>
 #include <asm/ioctls.h>
@@ -79,6 +80,8 @@ static DEFINE_MUTEX(audpp_lock);
 #define AUDPP_CMD_IIR_TUNING_FILTER  1
 #define AUDPP_CMD_EQUALIZER	2
 #define AUDPP_CMD_ADRC	3
+#define AUDPP_CMD_MBADRC		10
+#define COMMON_OBJ_ID 6
 
 #define ADRC_ENABLE  0x0001
 #define EQ_ENABLE    0x0002
@@ -133,7 +136,11 @@ struct audpp_state {
 
 	/* flags, 48 bits sample/bytes counter per channel */
 	uint16_t avsync[CH_COUNT * AUDPP_CLNT_MAX_COUNT + 1];
-
+	int mbadrc_enable;
+	int mbadrc_needs_commit;
+	char *mbadrc_data;
+	dma_addr_t mbadrc_phys;
+	audpp_cmd_cfg_object_params_mbadrc mbadrc;
 	int adrc_enable;
 	struct adrc_filter adrc;
 
@@ -143,6 +150,32 @@ struct audpp_state {
 	int rx_iir_enable;
 	struct rx_iir_filter iir;
 };
+
+/* Implementation of COPP features */
+int audpp_dsp_set_mbadrc(unsigned id, unsigned enable,
+			 audpp_cmd_cfg_object_params_mbadrc *mbadrc)
+{
+	audpp_cmd_cfg_object_params_mbadrc cmd;
+
+	if (id != COMMON_OBJ_ID)
+		return -EINVAL;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.common.comman_cfg = AUDPP_CMD_CFG_OBJ_UPDATE;
+	cmd.common.command_type = AUDPP_CMD_MBADRC;
+
+	if (enable) {
+		memcpy(&cmd.num_bands, &mbadrc->num_bands,
+		       sizeof(*mbadrc) -
+		       (AUDPP_CMD_CFG_OBJECT_PARAMS_COMMON_LEN + 2));
+		cmd.enable = AUDPP_CMD_ADRC_FLAG_ENA;
+	} else
+		cmd.enable = AUDPP_CMD_ADRC_FLAG_DIS;
+
+	/*order the writes to mbadrc */
+	dma_coherent_pre_ops();
+	return audpp_send_queue3(&cmd, sizeof(cmd));
+}
 
 struct audpp_state the_audpp_state = {
 	.lock = &audpp_lock,
@@ -164,6 +197,12 @@ int audpp_send_queue3(void *cmd, unsigned len)
 {
 	return msm_adsp_write(the_audpp_state.mod,
 			      QDSP_uPAudPPCmd3Queue, cmd, len);
+}
+
+static int is_audpp_enable(void)
+{
+	struct audpp_state *audpp = &the_audpp_state;
+	return audpp->enabled;
 }
 
 static int audpp_dsp_config(int enable)
@@ -262,6 +301,20 @@ static void audpp_status_broadcast(struct audpp_state *audpp,
 	}
 }
 
+static int audpp_enable_mbadrc(struct audpp_state *audpp, int enable)
+{
+	if (audpp->mbadrc_enable == enable &&
+				!audpp->mbadrc_needs_commit)
+		   return 0;
+	audpp->mbadrc_enable = enable;
+	if (is_audpp_enable()) {
+		audpp_dsp_set_mbadrc(COMMON_OBJ_ID, enable,
+						&audpp->mbadrc);
+		audpp->mbadrc_needs_commit = 0;
+	}
+	return 0;
+}
+
 static void audpp_dsp_event(void *data, unsigned id, size_t len,
 			    void (*getevent)(void *ptr, size_t len))
 {
@@ -307,10 +360,16 @@ static void audpp_dsp_event(void *data, unsigned id, size_t len,
 		if (msg[0] == AUDPP_MSG_ENA_ENA) {
 			MM_AUD_INFO("audpp: ENABLE\n");
 			audpp->enabled = 1;
-			audpp_dsp_set_adrc();
-			audpp_dsp_set_eq();
-			audpp_dsp_set_rx_iir();
-			audpp_broadcast(audpp, id, msg);
+		if (audpp->adrc_enable) {
+		MM_AUD_INFO("audpp_dsp_set_adrc\n");
+		audpp_dsp_set_adrc(); }
+		if (audpp->mbadrc_enable) {
+		MM_AUD_INFO("audpp_dsp_set_mbadrc\n");
+		audpp_dsp_set_mbadrc(COMMON_OBJ_ID, 1,
+			 &(the_audpp_state.mbadrc)); }
+		audpp_dsp_set_eq();
+		audpp_dsp_set_rx_iir();
+		audpp_broadcast(audpp, id, msg);
 		} else if (msg[0] == AUDPP_MSG_ENA_DIS) {
 			MM_AUD_INFO("audpp: DISABLE\n");
 			audpp->enabled = 0;
@@ -584,6 +643,7 @@ static long audpp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	struct audpp_state *audpp = file->private_data;
 	int rc = 0, enable;
 	uint16_t enable_mask;
+	int prev_state;
 	/* int i; */
 
 	mutex_lock(audpp->lock);
@@ -592,9 +652,10 @@ static long audpp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (copy_from_user(&enable_mask, (void *) arg,
 				sizeof(enable_mask)))
 			goto out_fault;
-
 		enable = (enable_mask & ADRC_ENABLE)? 1 : 0;
 		audpp_enable_adrc(audpp, enable);
+		enable = (enable_mask & MBADRC_ENABLE)? 1 : 0;
+		audpp_enable_mbadrc(audpp, enable);
 		enable = (enable_mask & EQ_ENABLE)? 1 : 0;
 		audpp_enable_eq(audpp, enable);
 		enable = (enable_mask & IIR_ENABLE)? 1 : 0;
@@ -617,6 +678,35 @@ static long audpp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		MM_AUD_INFO("0x%04x\n", audpp->adrc.adrc_system_delay);
 #endif
 		break;
+
+	case AUDIO_SET_MBADRC: {
+		uint32_t mbadrc_coeff_buf;
+		prev_state = audpp->mbadrc_enable;
+		audpp->mbadrc_enable = 0;
+		if (copy_from_user(&audpp->mbadrc.num_bands, (void *) arg,
+				sizeof(audpp->mbadrc) -
+				(AUDPP_CMD_CFG_OBJECT_PARAMS_COMMON_LEN + 2)))
+				rc = -EFAULT;
+		else if (audpp->mbadrc.ext_buf_size) {
+			mbadrc_coeff_buf = (uint32_t) ((char *) arg +
+					sizeof(audpp->mbadrc) -
+				(AUDPP_CMD_CFG_OBJECT_PARAMS_COMMON_LEN + 2));
+			if ((copy_from_user(audpp->mbadrc_data,
+					(void *) mbadrc_coeff_buf,
+					AUDPP_MBADRC_EXTERNAL_BUF_SIZE * 2))) {
+				rc = -EFAULT;
+				break;
+			}
+			audpp->mbadrc.ext_buf_lsw =
+					audpp->mbadrc_phys & 0xFFFF;
+			audpp->mbadrc.ext_buf_msw =
+				((audpp->mbadrc_phys & 0xFFFF0000) >> 16);
+		}
+		audpp->mbadrc_enable = prev_state;
+		if (!rc)
+			audpp->mbadrc_needs_commit = 1;
+		break;
+	}
 
 	case AUDIO_SET_EQ:
 		if (copy_from_user(&audpp->eq, (void *) arg, sizeof(audpp->eq)))

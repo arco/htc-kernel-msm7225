@@ -94,6 +94,7 @@ static struct wifi_platform_data marvelct_wifi_control = {
 	.mem_prealloc   = marvelct_wifi_mem_prealloc,
 	.get_mac_addr	= marvelct_wifi_get_mac_addr,
 	.dot11n_enable  = 1,
+	.cscan_enable   = 1,
 };
 
 static struct platform_device marvelct_wifi_device = {

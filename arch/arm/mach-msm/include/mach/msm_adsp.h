@@ -50,6 +50,7 @@ int32_t get_adsp_resource(unsigned short client_idx,
 				void *cmd_buf, size_t cmd_size);
 int32_t put_adsp_resource(unsigned short client_idx,
 				void *cmd_buf, size_t cmd_size);
+void set_audpp_debug_flag(int flag);
 
 /* Write is safe to call from interrupt context.
  */

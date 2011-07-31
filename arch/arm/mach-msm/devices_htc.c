@@ -179,8 +179,8 @@ static struct resource msm_kgsl_resources[] = {
 		.flags	= IORESOURCE_MEM,
 	},
 	{
-#ifdef CONFIG_ARCH_MSM7X30
 		.name   = "kgsl_yamato_irq",
+#ifdef CONFIG_ARCH_MSM7X30
 		.start  = INT_GRP_3D,
 		.end    = INT_GRP_3D,
 #else
@@ -226,6 +226,31 @@ static struct kgsl_platform_data kgsl_pdata = {
 	.grp3d_clk_name = "grp_clk",
 	.grp2d0_clk_name = "grp_2d_clk",
 };
+#else	/* 7x27 */
+static struct kgsl_platform_data kgsl_pdata = {
+	.high_axi_3d = 160000,
+	.max_grp2d_freq = 0,
+	.min_grp2d_freq = 0,
+	.set_grp2d_async = NULL,
+	.max_grp3d_freq = 0,
+	.min_grp3d_freq = 0,
+	.set_grp3d_async = NULL,
+	.imem_clk_name = "imem_clk",
+	.grp3d_clk_name = "grp_clk",
+	.grp3d_pclk_name = "grp_pclk",
+	.grp2d0_clk_name = NULL,
+	.idle_timeout_3d = HZ/5,
+	.idle_timeout_2d = 0,
+#ifdef CONFIG_KGSL_PER_PROCESS_PAGE_TABLE
+	.pt_va_size = SZ_32M,
+	/* Maximum of 32 concurrent processes */
+	.pt_max_count = 32,
+#else
+	.pt_va_size = SZ_128M,
+	/* We only ever have one pagetable for everybody */
+	.pt_max_count = 1,
+#endif
+};
 #endif
 
 static struct platform_device msm_kgsl_device = {
@@ -233,11 +258,9 @@ static struct platform_device msm_kgsl_device = {
 	.id		= -1,
 	.resource	= msm_kgsl_resources,
 	.num_resources	= ARRAY_SIZE(msm_kgsl_resources),
-#ifdef CONFIG_ARCH_MSM7X30
 	.dev = {
 		.platform_data = &kgsl_pdata,
 	},
-#endif
 };
 
 #if !defined(CONFIG_ARCH_MSM7X30)
@@ -639,6 +662,12 @@ char *board_serialno(void)
 	return board_sn;
 }
 
+static int sku_id;
+int board_get_sku_tag()
+{
+	return sku_id;
+}
+
 #define ATAG_SKUID 0x4d534D73
 int __init parse_tag_skuid(const struct tag *tags)
 {
@@ -653,8 +682,10 @@ int __init parse_tag_skuid(const struct tag *tags)
 		}
 	}
 
-	if (find)
+	if (find) {
 		skuid = t->u.revision.rev;
+		sku_id = skuid;
+	}
 	printk(KERN_DEBUG "parse_tag_skuid: hwid = 0x%x\n", skuid);
 	return skuid;
 }
@@ -745,6 +776,23 @@ char * board_get_mfg_sleep_gpio_table(void)
         return mfg_gpio_table;
 }
 EXPORT_SYMBOL(board_get_mfg_sleep_gpio_table);
+
+static char *qwerty_color_tag = NULL;
+static int __init board_set_qwerty_color_tag(char *get_qwerty_color)
+{
+	if (strlen(get_qwerty_color))
+		qwerty_color_tag = get_qwerty_color;
+	else
+		qwerty_color_tag = NULL;
+	return 1;
+}
+__setup("androidboot.qwerty_color=", board_set_qwerty_color_tag);
+
+void board_get_qwerty_color_tag(char **ret_data)
+{
+	*ret_data = qwerty_color_tag;
+}
+EXPORT_SYMBOL(board_get_qwerty_color_tag);
 
 static char *emmc_tag;
 static int __init board_set_emmc_tag(char *get_hboot_emmc)

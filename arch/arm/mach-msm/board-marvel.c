@@ -26,6 +26,7 @@
 #include <linux/himax8250.h>
 #include <linux/akm8975.h>
 #include <linux/bma150.h>
+#include <linux/bma250.h>
 #include <linux/cm3628.h>
 #include <linux/sysdev.h>
 #include <linux/android_pmem.h>
@@ -225,6 +226,17 @@ static struct bma150_platform_data marvel_g_sensor_pdata = {
 	.chip_layout = 0,
 };
 
+static struct bma250_platform_data gsensor_bma250_platform_data = {
+	.chip_layout = 0,
+};
+
+static struct i2c_board_info i2c_bma250_devices[] = {
+	{
+		I2C_BOARD_INFO(BMA250_I2C_NAME, 0x30 >> 1),
+		.platform_data = &gsensor_bma250_platform_data,
+	},
+};
+
 static struct platform_device microp_devices[] = {
 	{
 		.name		= "leds-microp",
@@ -248,11 +260,37 @@ static struct platform_device microp_devices[] = {
 	},
 };
 
+static struct platform_device microp_devices_B14[] = {
+	{
+		.name		= "leds-microp",
+		.id		= -1,
+		.dev		= {
+			.platform_data	= &microp_leds_data,
+		},
+	},
+	{
+		.name	= "HTC_HEADSET_MGR",
+		.id	= -1,
+		.dev	= {
+			.platform_data	= &htc_headset_mgr_data,
+		},
+	},
+};
+
 static struct microp_i2c_platform_data microp_data = {
 	.num_functions   = ARRAY_SIZE(microp_functions),
 	.microp_function = microp_functions,
 	.num_devices = ARRAY_SIZE(microp_devices),
 	.microp_devices = microp_devices,
+	.gpio_reset = MARVEL_GPIO_UP_RESET_N,
+	.spi_devices = SPI_GSENSOR,
+};
+
+static struct microp_i2c_platform_data microp_data_B14 = {
+	.num_functions   = ARRAY_SIZE(microp_functions),
+	.microp_function = microp_functions,
+	.num_devices = ARRAY_SIZE(microp_devices_B14),
+	.microp_devices = microp_devices_B14,
 	.gpio_reset = MARVEL_GPIO_UP_RESET_N,
 	.spi_devices = SPI_GSENSOR,
 };
@@ -574,6 +612,38 @@ static struct i2c_board_info i2c_devices[] = {
 	{
 		I2C_BOARD_INFO(MICROP_I2C_NAME, 0xCC >> 1),
 		.platform_data = &microp_data,
+		.irq = MARVEL_GPIO_TO_INT(MARVEL_GPIO_UP_INT_N)
+	},
+	{
+		I2C_BOARD_INFO("tps65200", 0xD4 >> 1),
+		.platform_data = &tps65200_data,
+	},
+	{
+		I2C_BOARD_INFO(CM3628_I2C_NAME, 0xC0 >> 1),
+		.platform_data = &cm3628_pdata,
+		.irq = MSM_GPIO_TO_INT(MARVEL_GPIO_PROXIMITY_INT),
+	},
+	{
+		I2C_BOARD_INFO(AKM8975_I2C_NAME, 0x1A >> 1),
+		.platform_data = &compass_platform_data,
+		.irq = MARVEL_GPIO_TO_INT(MARVEL_GPIO_COMPASS_RDY),
+	},
+};
+
+static struct i2c_board_info i2c_devices_B14[] = {
+	{
+		I2C_BOARD_INFO(CYPRESS_TMA_NAME, 0x67),
+		.platform_data = &marvel_ts_cy8c_data,
+		.irq = MSM_GPIO_TO_INT(MARVEL_GPIO_TP_ATT_N)
+	},
+	{
+		I2C_BOARD_INFO(HIMAX8250_NAME, 0x90 >> 1),
+		.platform_data = &marvel_ts_himax_data,
+		.irq = MSM_GPIO_TO_INT(MARVEL_GPIO_TP_ATT_N)
+	},
+	{
+		I2C_BOARD_INFO(MICROP_I2C_NAME, 0xCC >> 1),
+		.platform_data = &microp_data_B14,
 		.irq = MARVEL_GPIO_TO_INT(MARVEL_GPIO_UP_INT_N)
 	},
 	{
@@ -1021,13 +1091,17 @@ static struct attribute_group marvel_properties_attr_group = {
 static void __init marvel_init(void)
 {
 	int rc;
+	int sku_id = 0;
 	char *cid = NULL;
 	struct kobject *properties_kobj;
 
 	printk("marvel_init() revision = 0x%X\n", system_rev);
 	msm_clock_init();
 	board_get_cid_tag(&cid);
+	sku_id = board_get_sku_tag();
 
+	if (sku_id)
+		printk(KERN_INFO "Marvel show_skuid: 0x%x\n", sku_id);
 	/* for bcm */
 	bt_export_bd_address();
 
@@ -1119,7 +1193,21 @@ static void __init marvel_init(void)
 
 	msm_device_i2c_init();
 	platform_add_devices(devices, ARRAY_SIZE(devices));
-	i2c_register_board_info(0, i2c_devices, ARRAY_SIZE(i2c_devices));
+
+	if ((sku_id & 0xFFF00) == 0x2AB00) {
+		printk(KERN_INFO "Marvel#B14: use BMA250\n");
+		i2c_register_board_info(0, i2c_devices_B14,
+				ARRAY_SIZE(i2c_devices_B14));
+
+		/* probe g-sensor driver */
+		i2c_register_board_info(0, i2c_bma250_devices,
+		ARRAY_SIZE(i2c_bma250_devices));
+
+	} else {
+		printk(KERN_INFO "Marvel: use BMA023\n");
+		i2c_register_board_info(0, i2c_devices,
+				ARRAY_SIZE(i2c_devices));
+	}
 
 	marvel_init_panel();
 

@@ -124,6 +124,7 @@
 
 /* 35mm headset */
 #define MARVELC_GPIO_35MM_HEADSET_DET    (83)
+#define MARVELC_GPIO_MIC_2V5_EN          (121)
 
 /*Camera AF VCM POWER*/
 #define MARVELC_GPIO_VCM_PD              (126)
