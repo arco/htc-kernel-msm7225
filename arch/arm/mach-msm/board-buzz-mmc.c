@@ -207,7 +207,7 @@ static unsigned int buzz_wifi_status(struct device *dev)
 }
 
 static struct mmc_platform_data buzz_wifi_data = {
-	.ocr_mask		= MMC_VDD_28_29,
+	.ocr_mask		= MMC_VDD_20_21,
 	.status			= buzz_wifi_status,
 	.register_status_notify	= buzz_wifi_status_register,
 	.embedded_sdio		= &buzz_wifi_emb_data,
