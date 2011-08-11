@@ -733,6 +733,18 @@ int akm8973_probe(struct i2c_client *client, const struct i2c_device_id *id)
 				"%s: request reset gpio failed\n", __func__);
 			goto err_set_reset_gpio;
 		}
+#if defined(CONFIG_MACH_BAHAMAS)
+		err = gpio_request(pdata->intr, "akm8973");
+		if (err < 0) {
+			E("%s: request interrupt gpio failed\n", __func__);
+			goto err_request_reset_gpio;
+		}
+		err = gpio_direction_input(pdata->intr);
+		if (err < 0) {
+			E("%s: gpio direction input [interrupt] failed\n", __func__);
+			goto err_set_reset_gpio;
+		}
+#endif
 	} else {
 		E("%s: pdata or pdata->reset is NULL\n",
 			__func__);

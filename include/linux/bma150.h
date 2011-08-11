@@ -7,7 +7,11 @@
 #include <linux/ioctl.h>
 
 #define BMA150_I2C_NAME "bma150"
+#if defined(CONFIG_MACH_BAHAMAS)
+#define BMA150_G_SENSOR_NAME "bma150"
+#else
 #define BMA150_G_SENSOR_NAME "bma150_uP_spi"
+#endif
 
 #define BMAIO				0xA1
 
