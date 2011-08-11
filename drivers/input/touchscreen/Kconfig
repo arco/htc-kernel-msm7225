@@ -705,4 +705,10 @@ config TOUCHSCREEN_TPS6507X
 	  To compile this driver as a module, choose M here: the
 	  module will be called tps6507x_ts.
 
+config TOUCHSCREEN_TSSC_MANAGER
+	tristate "TSSC touchscreen"
+	depends on ARCH_MSM7225 || ARCH_MSM7227
+	help
+	  This enables support for MSM TSSC IF touchscreens.
+
 endif
