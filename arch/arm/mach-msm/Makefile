@@ -318,6 +318,8 @@ obj-$(CONFIG_MACH_BUZZ) += board-buzz.o board-buzz-panel.o board-buzz-keypad.o b
 obj-$(CONFIG_MACH_BUZZ) += board-buzz-rfkill.o board-buzz-mmc.o board-buzz-wifi.o
 obj-$(CONFIG_MACH_BEE) += board-bee.o board-bee-panel.o board-bee-keypad.o board-bee-microp.o
 obj-$(CONFIG_MACH_BEE) += board-bee-rfkill.o board-bee-mmc.o board-bee-wifi.o
+obj-$(CONFIG_MACH_BAHAMAS) += board-bahamas.o board-bahamas-panel.o board-bahamas-keypad.o board-bahamas-nand.o
+obj-$(CONFIG_MACH_BAHAMAS) += board-bahamas-rfkill.o board-bahamas-mmc.o board-bahamas-wifi.o
 
 # MSM7227 boards
 obj-$(CONFIG_MACH_LEGEND) += board-legend-rfkill.o
