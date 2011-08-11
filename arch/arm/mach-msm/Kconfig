@@ -1553,6 +1553,23 @@ config HTC_HEADSET_PMIC_ADC
 	help
 	  Provides support of HTC PMIC microphone ADC.
 
+config HTC_HEADSET_V1
+	tristate "HTC 2 Wire detection driver"
+	depends on MICROP_I2C
+	default n
+	help
+	  Provides support for detecting HTC 2 wire devices, such as wired
+	  headset, on the trout platform. Can be used with the msm serial
+	  debugger, but not with serial console.
+
+config HTC_AUDIOJACK_V1
+	tristate "Audio Jack detection driver"
+	depends on HTC_HEADSET_V1
+	default n
+	help
+	  Provides support for detecting audio jack, such as 3.5mm
+	  earphone, on the android platform.
+
 config HTC_ONMODE_CHARGING
 	bool "On Mode Charging Icon Support"
 	default n
