@@ -50,11 +50,27 @@ config FLASH_BACKLIGHT_OFF
 	  Turn off backlight when flash high
 
 comment "Camera Sensor Selection"
-config MT9T013
-	bool "Sensor mt9t013 (BAYER 3M)"
+
+choice
 	depends on MSM_CAMERA
-	---help---
+	prompt "Sensor mt9t013 (BAYER 3M) version"
+	default MT9T013_NONE
+	help
 	  MICRON 3M Bayer Sensor with AutoFocus
+
+	config MT9T013_NONE
+		bool "None"
+
+	config MT9T013
+		bool "Normal"
+		help
+		  MICRON 3M Bayer Sensor with AutoFocus
+
+	config MT9T013_CLICK
+		bool "HTC Tattoo"
+		help
+		  MICRON 3M Bayer Sensor used in the HTC Tattoo
+endchoice
 
 config MT9D112
 	bool "Sensor mt9d112 (YUV 2M)"

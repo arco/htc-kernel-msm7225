@@ -91,6 +91,16 @@ struct msm_camera_io_clk {
 	uint32_t vfe_clk_rate;
 };
 
+#if defined(CONFIG_MT9T013_CLICK)
+struct msm_camera_platform_data {
+	void (*camera_gpio_on) (void);
+	void (*camera_gpio_off)(void);
+	uint8_t snum;
+	struct msm_camera_sensor_info *sinfo;
+	struct msm_camera_io_ext ioext;
+};
+#endif
+
 struct msm_camera_device_platform_data {
 	void (*camera_gpio_on) (void);
 	void (*camera_gpio_off)(void);
@@ -119,8 +129,10 @@ struct msm_camera_legacy_device_platform_data {
 	struct msm_camsensor_device_platform_data *sensor_info;
 };
 
+#ifndef CONFIG_MT9T013_CLICK
 #define MSM_CAMERA_FLASH_NONE 0
 #define MSM_CAMERA_FLASH_LED  1
+#endif
 #define MSM_CAMERA_FLASH_SRC_PMIC (0x00000001<<0)
 #define MSM_CAMERA_FLASH_SRC_PWM  (0x00000001<<1)
 #define MSM_CAMERA_FLASH_SRC_CURRENT_DRIVER	(0x00000001<<2)
@@ -189,6 +201,22 @@ struct msm_camera_sensor_strobe_flash_data {
 	int flash_charge_done;
 };
 
+#if defined(CONFIG_MT9T013_CLICK)
+enum msm_camera_flash {
+	MSM_CAMERA_FLASH_NONE,
+	MSM_CAMERA_FLASH_LED
+};
+struct msm_camera_sensor_info {
+	int sensor_reset;
+	int sensor_pwd;
+	int vcm_pwd;
+	int mclk;
+	const char *sensor_name;
+	enum msm_camera_flash flash_type;
+	int (*sensor_probe)(void *, void *);
+};
+#else
+
 struct msm_camera_sensor_info {
 	const char *sensor_name;
 	int sensor_reset;
@@ -238,7 +266,7 @@ struct msm_camera_sensor_info {
 	int zero_shutter_mode; /* for doing zero shutter lag on MIPI */
 	int dev_node;
 };
-
+#endif
 
 struct clk;
 
