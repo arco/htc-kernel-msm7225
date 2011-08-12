@@ -14,7 +14,7 @@ obj-$(CONFIG_LKDTM)		+= lkdtm.o
 obj-$(CONFIG_TIFM_CORE)       	+= tifm_core.o
 obj-$(CONFIG_TIFM_7XX1)       	+= tifm_7xx1.o
 obj-$(CONFIG_PHANTOM)		+= phantom.o
-ifeq ($(CONFIG_ARCH_MSM7225),y)
+ifeq ($(CONFIG_MACH_BUZZ),y)
 	obj-$(CONFIG_ANDROID_PMEM)	+= pmem_7x27.o
 else
 ifeq ($(CONFIG_ARCH_MSM7227),y)

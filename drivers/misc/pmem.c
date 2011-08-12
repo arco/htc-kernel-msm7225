@@ -734,8 +734,8 @@ int get_pmem_addr(struct file *file, unsigned long *start,
 	return 0;
 }
 
-int get_pmem_file(int fd, unsigned long *start, unsigned long *vstart,
-		  unsigned long *len, struct file **filp)
+int get_pmem_file(unsigned int fd, unsigned long *start, unsigned long *vstart,
+                  unsigned long *len, struct file **filp)
 {
 	struct file *file;
 
