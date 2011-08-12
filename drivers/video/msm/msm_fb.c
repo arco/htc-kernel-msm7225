@@ -1107,7 +1107,7 @@ static struct file_operations debug_fops = {
 };
 #endif
 
-#if defined(CONFIG_MACH_HERO) || defined(CONFIG_MACH_BUZZ)
+#if defined(CONFIG_MACH_BAHAMAS) || defined(CONFIG_MACH_BUZZ) || defined(CONFIG_MACH_HERO)
 #define BITS_PER_PIXEL_DEF 16
 #else
 #define BITS_PER_PIXEL_DEF 32
