@@ -124,6 +124,11 @@ static int verify_vdec_pkt_cmd(struct msm_adsp_module *module,
 		skip = 0;
 		start_pos = 5;
 		break;
+	case 0x9201: /*For Real Decoder*/
+		num_addr = 2;
+		skip = 0;
+		start_pos = 5;
+		break;
 	case 0xBD01: /* mpeg-4 and h.263 vld in dsp */
 		num_addr = 3;
 		skip = 0;
