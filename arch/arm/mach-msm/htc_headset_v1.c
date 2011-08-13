@@ -236,8 +236,8 @@ void disable_h2w_irq(void)
 		return;
 
 	local_irq_save(irq_flags);
-	disable_irq(hi->irq_btn);
-	disable_irq(hi->irq);
+	disable_irq_nosync(hi->irq_btn);
+	disable_irq_nosync(hi->irq);
 	ret = set_irq_wake(hi->irq, 0);
 	ret = set_irq_wake(hi->irq_btn, 0);
 	local_irq_restore(irq_flags);
