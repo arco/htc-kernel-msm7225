@@ -2932,6 +2932,7 @@ static int microp_i2c_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&auto_bl_delay_work,
 			microp_i2c_auto_bl_work_func);
 
+#ifndef CONFIG_MACH_BAHAMAS
 	/* Light Sensor */
 	cdata->ls_input_dev = input_allocate_device();
 	if (!cdata->ls_input_dev) {
@@ -2956,6 +2957,7 @@ static int microp_i2c_probe(struct i2c_client *client,
 				__func__);
 		goto err_register_misc_register;
 	}
+#endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	if (cdata->enable_early_suspend)	{
@@ -3015,6 +3017,7 @@ err_h2w_query_microp_mic:
 err_h2w_3btval:
 	misc_deregister(&lightsensor_misc);
 
+#ifndef CONFIG_MACH_BAHAMAS
 err_register_misc_register:
 	input_unregister_device(cdata->ls_input_dev);
 
@@ -3023,6 +3026,7 @@ err_register_input_dev:
 
 err_request_input_dev:
 	destroy_workqueue(cdata->microp_queue);
+#endif
 
 err_create_work_queue:
 
