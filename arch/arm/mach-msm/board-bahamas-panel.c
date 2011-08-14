@@ -243,7 +243,7 @@ eid_process_mddi_table(struct msm_mddi_client_data *client_data,
 
 		client_data->remote_write(client_data, value, reg);
 		if (msec)
-			mdelay(msec);
+			hr_msleep(msec);
 	}
 }
 
