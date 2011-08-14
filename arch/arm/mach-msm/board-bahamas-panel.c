@@ -42,7 +42,7 @@
 static struct led_trigger *eid_lcd_backlight;
 static void eid_set_backlight(int on)
 {
-	B(KERN_DEBUG "%s: enter.\n", __func__);
+	B("%s: enter.\n", __func__);
 
 	if (on)
 		led_trigger_event(eid_lcd_backlight, LED_FULL);
@@ -228,7 +228,6 @@ static struct mddi_table samsung_deinit_tb[] = {
 static void
 eid_process_mddi_table(struct msm_mddi_client_data *client_data,
 		struct mddi_table *table, ssize_t count)
-
 {
 	int i;
 	uint32_t reg, value, msec;
@@ -258,7 +257,7 @@ eid_mddi_power_client(struct msm_mddi_client_data *cdata, int on)
 {
 	unsigned id, on_off;
 
-	B("KERN_DEBUG %s: enter.\n", __func__);
+	B("%s: enter.\n", __func__);
 	if (on) {
 		on_off = 0;
 		id = PM_VREG_PDOWN_MDDI_ID;
@@ -344,31 +343,30 @@ eid_mddi_client_init(struct msm_mddi_bridge_platform_data *bridge_data,
 {
 	int panel_id;
 
-	/* B(KERN_DEBUG "%s: enter.\n", __func__); */
 	client_data->auto_hibernate(client_data, 0);
 	panel_id = eid_panel_detect();
 
 	switch (panel_id) {
 	case PANEL_HITACHI:
-		B(KERN_DEBUG "found hitachi mddi panel\n");
+		B("found hitachi mddi panel\n");
 		eid_process_mddi_table(client_data,
 				hitachi_init_tb,
 				ARRAY_SIZE(hitachi_init_tb));
 		break;
 	case PANEL_WINTEK:
-		B(KERN_DEBUG "found wintek mddi panel\n");
+		B("found wintek mddi panel\n");
 		eid_process_mddi_table(client_data,
 				wintek_init_tb,
 				ARRAY_SIZE(wintek_init_tb));
 		break;
 	case PANEL_SAMSUNG:
-		B(KERN_DEBUG "found samsung mddi panel\n");
+		B("found samsung mddi panel\n");
 		eid_process_mddi_table(client_data,
 				samsung_init_tb,
 				ARRAY_SIZE(samsung_init_tb));
 		break;
 	default:
-		B(KERN_DEBUG "unknown panel_id: %d\n", panel_id);
+		B("unknown panel_id: %d\n", panel_id);
 	};
 	client_data->auto_hibernate(client_data, 1);
 
@@ -378,7 +376,6 @@ eid_mddi_client_init(struct msm_mddi_bridge_platform_data *bridge_data,
 static int
 eid_mddi_client_uninit(struct msm_mddi_bridge_platform_data *bridge_data,
 			struct msm_mddi_client_data *client_data)
-
 {
 	return 0;
 }
@@ -421,19 +418,19 @@ eid_samsung_adjust(struct msm_mddi_client_data *client_data)
 	panel_id = eid_panel_detect();
 	switch (panel_id) {
 	case PANEL_HITACHI:
-		B(KERN_DEBUG "hitachi panel\n");
+		B("hitachi panel\n");
 		eid_process_mddi_table(client_data,
 				hitachi_adjust_tb,
 				ARRAY_SIZE(hitachi_adjust_tb));
 		break;
 	case PANEL_WINTEK:
-		B(KERN_DEBUG "wintek panel\n");
+		B("wintek panel\n");
 		eid_process_mddi_table(client_data,
 				wintek_adjust_tb,
 				ARRAY_SIZE(wintek_adjust_tb));
 		break;
 	case PANEL_SAMSUNG:
-		B(KERN_DEBUG "samsung panel\n");
+		B("samsung panel\n");
 		eid_process_mddi_table(client_data,
 				samsung_adjust_tb,
 				ARRAY_SIZE(samsung_adjust_tb));
@@ -449,11 +446,9 @@ eid_panel_unblank(struct msm_mddi_bridge_platform_data *bridge_data,
 		    struct msm_mddi_client_data *client_data)
 {
 	int panel_id;
-
 	BUG_ON(!bridge_data);
 	BUG_ON(!client_data);
-
-	B(KERN_DEBUG "%s: enter.\n", __func__);
+	B("%s: enter.\n", __func__);
 
 	client_data->auto_hibernate(client_data, 0);
 	panel_id = eid_panel_detect();
@@ -463,25 +458,25 @@ eid_panel_unblank(struct msm_mddi_bridge_platform_data *bridge_data,
 	} else {
 		switch (panel_id) {
 		case PANEL_HITACHI:
-			B(KERN_DEBUG "found hitachi mddi panel\n");
+			B("found hitachi mddi panel\n");
 			eid_process_mddi_table(client_data,
 					hitachi_init_tb,
 					ARRAY_SIZE(hitachi_init_tb));
 			break;
 		case PANEL_WINTEK:
-			B(KERN_DEBUG "found wintek mddi panel\n");
+			B("found wintek mddi panel\n");
 			eid_process_mddi_table(client_data,
 					wintek_init_tb,
 					ARRAY_SIZE(wintek_init_tb));
 			break;
 		case PANEL_SAMSUNG:
-			B(KERN_DEBUG "found samsung mddi panel\n");
+			B("found samsung mddi panel\n");
 			eid_process_mddi_table(client_data,
 					samsung_init_tb,
 					ARRAY_SIZE(samsung_init_tb));
 			break;
 		default:
-			B(KERN_DEBUG "unknown panel_id: %d\n", panel_id);
+			B("unknown panel_id: %d\n", panel_id);
 		};
 	}
 	eid_set_backlight(1);
@@ -518,84 +513,6 @@ eid_panel_blank(struct msm_mddi_bridge_platform_data *bridge_data,
 
 	return 0;
 }
-/* todo: the following is dirty, clean it */
-static spinlock_t g_list_lock = SPIN_LOCK_UNLOCKED;
-static int g_panel_id = -1;
-static ssize_t panel_show(struct kobject *kobj,
-			struct kobj_attribute *attr, char *buf)
-{
-	char *s = buf;
-	unsigned long irqflags;
-
-	spin_lock_irqsave(&g_list_lock, irqflags);
-	switch (g_panel_id) {
-	case PANEL_HITACHI:
-		s += sprintf(s, "verdor:hitachi\n");
-		break ;
-	case PANEL_WINTEK:
-		s += sprintf(s, "vendor:wintek\n");
-		break ;
-	case PANEL_SAMSUNG:
-		s += sprintf(s, "vendor:samsung\n");
-		break ;
-	default:
-		s += sprintf(s, "vendor:unknown\n");
-		break ;
-	}
-	spin_unlock_irqrestore(&g_list_lock, irqflags);
-	return (s - buf);
-}
-
-#define android_display_ro_attr(_name) \
-static struct kobj_attribute _name##_attr = {   \
-	.attr   = {                 \
-		.name = __stringify(_name), \
-		.mode = 0444,           \
-	},                      \
-	.show   = _name##_show,     \
-	.store  = NULL, \
-}
-
-android_display_ro_attr(panel);
-
-static struct attribute *attrs[] = {
-	&panel_attr.attr,
-	NULL ,
-} ;
-
-static struct attribute_group attr_group = {
-	.attrs = attrs,
-};
-
-static struct kobject *android_display_kobj = NULL;
-#define GPIO_BLOCK_BASE         0x150000
-#define GPIODATA                (GPIO_BLOCK_BASE|0x00)
-static int display_sysfs_init(void)
-{
-	int ret ;
-
-	android_display_kobj = kobject_create_and_add("android_display", NULL);
-	if (android_display_kobj == NULL) {
-		printk(KERN_DEBUG \
-			"msmfb_sysfs_init: subsystem_register failed\n");
-		ret = -ENOMEM;
-		goto err;
-	}
-	ret = sysfs_create_group(android_display_kobj, &attr_group);
-	if (ret) {
-		printk(KERN_DEBUG \
-			"msmfb_sysfs_init: sysfs_create_group failed\n");
-		goto err4;
-	}
-
-	g_panel_id = eid_panel_detect() ;
-
-	return 0 ;
-err4:
-	kobject_del(android_display_kobj);
-err:
-	return ret ;
-}
 
 static void
 eid_fixup(uint16_t *mfr_name, uint16_t *product_code)
@@ -630,13 +547,11 @@ static struct msm_mddi_bridge_platform_data samsung_client_data = {
 };
 
 static struct msm_mddi_platform_data eid_pdata = {
-	/*.clk_rate = 61440000,		default MDDI frequenct*/
-	.clk_rate = 68571000,	/*set MDDI frequency to 68.57Mhz*/
+	.clk_rate = 68571000,
 	.power_client = eid_mddi_power_client,
 	.fixup = eid_fixup,
 	.fb_resource = resources_msm_fb,
 	.num_clients = 1,
-	.type = MSM_MDP_MDDI_TYPE_I,
 	.client_platform_data = {
 		{
 			.product_id = (0x0101 << 16 | 0x0154),
@@ -671,6 +586,7 @@ int __init bahamas_init_panel(void)
 	rc = platform_device_register(&msm_device_mdp);
 	if (rc)
 		return rc;
+
 	msm_device_mddi0.dev.platform_data = &eid_pdata;
 	rc = platform_device_register(&msm_device_mddi0);
 	if (rc)
@@ -680,8 +596,6 @@ int __init bahamas_init_panel(void)
 	if (IS_ERR(eid_lcd_backlight))
 		printk(KERN_ERR
 			"%s: backlight registration failed!\n", __func__);
-	rc = display_sysfs_init() ;
-	if (rc)
-		return rc ;
+
 	return 0;
 }
