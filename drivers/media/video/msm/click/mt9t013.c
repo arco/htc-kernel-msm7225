@@ -1228,7 +1228,7 @@ static int mt9t013_probe_init_sensor(struct msm_camera_sensor_info *data)
 	if (rc < 0)
 		goto init_probe_fail;
 
-	msleep(10);
+	msleep(MT9T013_RESET_DELAY_MSECS);
 
 	/* 3. Read sensor Model ID: */
 	rc = mt9t013_i2c_read_w(mt9t013_client->addr,
@@ -1250,7 +1250,7 @@ static int mt9t013_probe_init_sensor(struct msm_camera_sensor_info *data)
 	if (rc < 0)
 		goto init_probe_fail;
 
-	mdelay(MT9T013_RESET_DELAY_MSECS);
+	msleep(MT9T013_RESET_DELAY_MSECS);
 
   goto init_probe_done;
 
