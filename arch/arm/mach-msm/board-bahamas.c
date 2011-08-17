@@ -83,9 +83,6 @@
 #include <mach/msm_hsusb.h>
 #include <mach/htc_usb.h>
 
-//void msm_init_irq(void);
-//void msm_init_gpio(void);
-
 static int bahamas_phy_init_seq[] = {0x2C, 0x31, 0x20, 0x32, 0x1, 0x0D, 0x1, 0x10, -1};
 
 #define HSUSB_API_INIT_PHY_PROC 2
@@ -146,7 +143,7 @@ static int panel_detect(void)
 	return panel_id ;
 }
 
-//Samsung panel
+// Samsung panel
 static struct microp_pin_config microp_pins_0[] = {
 	{
 		.name	= "green",
@@ -350,70 +347,31 @@ static struct platform_device htc_battery_pdev = {
 	},
 };
 
-#ifdef CONFIG_MT9T013
-static struct msm_camera_device_platform_data msm_camera_device_data = {
-	.camera_gpio_on	= config_bahamas_camera_on_gpios,
-	.camera_gpio_off= config_bahamas_camera_off_gpios,
-	.ioext.mdcphy	= MSM_MDC_PHYS,
-	.ioext.mdcsz	= MSM_MDC_SIZE,
-	.ioext.appphy	= MSM_CLK_CTL_PHYS,
-	.ioext.appsz	= MSM_CLK_CTL_SIZE,
-};
-
-static struct msm_camera_sensor_info msm_camera_sensor_mt9t013_data = {
-	.sensor_name	= "mt9t013",
-	.sensor_reset	= 118,
-	.sensor_pwd	= BAHAMAS_MT9T013_CAM_PWDN,
-	.vcm_pwd	= 0,
-	.pdata		= &msm_camera_device_data,
-};
-
-static struct platform_device msm_camera_sensor_mt9t013 = {
-	.name	= "msm_camera_mt9t013",
-	.dev	= {
-		.platform_data = &msm_camera_sensor_mt9t013_data,
-	},
-};
-#endif
-
 #ifdef CONFIG_MT9T013_CLICK
-#define MSM_PROBE_INIT(name) name##_probe_init
-static struct msm_camera_sensor_info msm_camera_sensor = {
-	.sensor_reset	= 118,
-	//.sensor_pwd	= 107,
-	//.vcm_pwd	= 117,     /* FIXME: by Bahamas GPIO table,*/
-	.sensor_name	= "s5k4b2fx",
-//	},
-};
-
-int s5k4b2fx_probe_init(void *dev, void *ctrl)
-{
-	return -1;
-}
-
-static struct msm_camera_sensor_info msm_camera_sensor_s5k4b2fx = {
-	.sensor_reset	= 118,
-	.sensor_name	= "s5k4b2fx",
-	.sensor_probe	= MSM_PROBE_INIT(s5k4b2fx),
-};
-
 static struct msm_camera_sensor_info msm_camera_sensor_mt9t013 = {
 	.sensor_reset	= 118,
 	.sensor_pwd	= BAHAMAS_MT9T013_CAM_PWDN,
 	.sensor_name	= "mt9t013",
-	.sensor_probe	= MSM_PROBE_INIT(mt9t013),
+	.sensor_probe	= mt9t013_probe_init,
 };
-#undef MSM_PROBE_INIT
 
 static struct msm_camera_platform_data msm_camera_device_data = {
 	.camera_gpio_on  = config_bahamas_camera_on_gpios,
 	.camera_gpio_off = config_bahamas_camera_off_gpios,
 	.snum = 1,
-	.sinfo = &msm_camera_sensor,
+	.sinfo = &msm_camera_sensor_mt9t013,
 	.ioext.mdcphy = MSM_MDC_PHYS,
 	.ioext.mdcsz  = MSM_MDC_SIZE,
 	.ioext.appphy = MSM_CLK_CTL_PHYS,
 	.ioext.appsz  = MSM_CLK_CTL_SIZE,
+};
+
+static struct platform_device msm_camera_device = {
+	.name   = "msm_camera",
+	.id     = -1,
+	.dev    = {
+		.platform_data = &msm_camera_device_data,
+	},
 };
 #endif
 
@@ -458,24 +416,6 @@ static struct i2c_board_info i2c_devices[] = {
 		.irq = MSM_GPIO_TO_INT(BAHAMAS_GPIO_GSENSOR_INT_N),
 	},
 };
-
-#ifdef CONFIG_MT9T013_CLICK
-static struct platform_device msm_camera_device = {
-	.name	= "msm_camera",
-	//.id	= 0,
-	.id	= -1,
-	.dev	= {
-	.platform_data = &msm_camera_device_data,
-	},
-};
-
-static struct platform_device trout_camera = {
-	.name		= "camera",
-	.dev		= {
-	.platform_data	= &msm_camera_device,
-	},
-};
-#endif
 
 #ifdef CONFIG_USB_ANDROID
 static struct msm_hsusb_platform_data msm_hsusb_pdata = {
@@ -788,9 +728,9 @@ static struct h2w_platform_data bahamas_h2w_data = {
 
 static struct platform_device bahamas_h2w = {
 	.name		= "h2w",
-	.id			= -1,
+	.id		= -1,
 	.dev		= {
-		.platform_data	= &bahamas_h2w_data,
+		.platform_data = &bahamas_h2w_data,
 	},
 };
 
@@ -800,9 +740,9 @@ static struct audio_jack_platform_data bahamas_jack_data = {
 
 static struct platform_device bahamas_audio_jack = {
 	.name		= "audio-jack",
-	.id			= -1,
+	.id		= -1,
 	.dev		= {
-		.platform_data	= &bahamas_jack_data,
+		.platform_data = &bahamas_jack_data,
 	},
 };
 
@@ -827,7 +767,7 @@ static struct platform_device tssc_ts_device = {
 	.name   = "tssc-manager",
 	.id     = -1,
 	.dev    = {
-		.platform_data  = &tssc_ts_device_data,
+		.platform_data = &tssc_ts_device_data,
 	},
 };
 
@@ -854,11 +794,7 @@ static struct platform_device *devices[] __initdata = {
 	&msm_device_i2c,
 	&htc_battery_pdev,
 	&tssc_ts_device,
-#ifdef CONFIG_MT9T013
-	&msm_camera_sensor_mt9t013,
-#endif
 #ifdef CONFIG_MT9T013_CLICK
-	&trout_camera,
 	&msm_camera_device,
 #endif
 	&bahamas_rfkill,
@@ -1089,10 +1025,6 @@ static void __init bahamas_init(void)
 	*/
 	config_gpios();
 
-	/* We need to set this pin to 0 only once on power-up; we will
-	* not actually enable the chip until we apply power to it via
-	* vreg.
-	*/
 	gpio_request(BAHAMAS_GPIO_CABLE_IN2, "gpio_cable_in2");
 	gpio_request(BAHAMAS_GPIO_AUD_EXTMIC_SEL, "gpio_aud_extmic_sel");
 	gpio_request(BAHAMAS_GPIO_WFM_ANT_SW, "gpio_wfm_ant_sw");
@@ -1147,15 +1079,6 @@ static void __init bahamas_init(void)
 	rc = bahamas_init_mmc(system_rev);
 	if (rc)
 		printk(KERN_CRIT "%s: MMC init failure (%d)\n", __func__, rc);
-
-#ifdef CONFIG_MT9T013_CLICK
-	if  (bahamas_is_3M_camera())   {
-		msm_camera_device_data.sinfo = &msm_camera_sensor_mt9t013;
-		}
-	else  {
-		msm_camera_device_data.sinfo = &msm_camera_sensor_s5k4b2fx;
-	}
-#endif
 
 	if(system_rev < 3) {
 		if (panel_detect() == PANEL_WINTEK) {
@@ -1214,18 +1137,6 @@ static void __init bahamas_map_io(void)
 {
 	printk("bahamas_init_map_io()\n");
 	msm_map_common_io();
-}
-
-int bahamas_is_3M_camera(void)
-{
-	int ret  = 0;
-
-	printk("bahamas_is_3M_camera, PCBID=0x%x\n", system_rev);
-
-	if (system_rev > 1)
-		ret  = 1;
-
-	return ret;
 }
 
 MACHINE_START(BAHAMAS, "bahamas")

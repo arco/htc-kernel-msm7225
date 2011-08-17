@@ -105,5 +105,4 @@ unsigned bahamas_engineerid(void);
 int __init bahamas_init_panel(void);
 int __init bahamas_init_keypad(void);
 int bahamas_init_mmc(unsigned int sys_rev);
-int bahamas_is_3M_camera(void);
 #endif
