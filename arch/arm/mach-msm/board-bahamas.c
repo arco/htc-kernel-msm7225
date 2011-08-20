@@ -1025,6 +1025,7 @@ static void __init bahamas_init(void)
 	*/
 	config_gpios();
 
+	gpio_request(BAHAMAS_GPIO_H2W_POWER, "bahamas_gpio_h2w_power");
 	gpio_request(BAHAMAS_GPIO_CABLE_IN2, "gpio_cable_in2");
 	gpio_request(BAHAMAS_GPIO_AUD_EXTMIC_SEL, "gpio_aud_extmic_sel");
 	gpio_request(BAHAMAS_GPIO_WFM_ANT_SW, "gpio_wfm_ant_sw");
