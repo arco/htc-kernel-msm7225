@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.14
-# Sun Aug 14 07:45:34 2011
+# Sat Aug 20 08:03:26 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -415,6 +415,7 @@ CONFIG_ARCH_HAS_BARRIERS=y
 # CONFIG_RESERVE_FIRST_PAGE is not set
 CONFIG_CPU_HAS_PMU=y
 CONFIG_ARM_ERRATA_411920=y
+CONFIG_ARM_ERRATA_364296=y
 # CONFIG_FIQ_DEBUGGER is not set
 
 #
