@@ -595,7 +595,7 @@ static uint32_t uart3_on_gpio_table[] = {
 };
 
 /* Set TX,RX to GPI */
-static uint32_t uart3_off_gpi_table[] = {
+static uint32_t uart3_off_gpio_table[] = {
 	PCOM_GPIO_CFG(BAHAMAS_GPIO_H2W_DATA, 0,
 		      GPIO_INPUT, GPIO_NO_PULL, GPIO_2MA), /* RX, H2W DATA */
 	PCOM_GPIO_CFG(BAHAMAS_GPIO_H2W_CLK, 0,
@@ -618,9 +618,9 @@ static void h2w_configure(int route)
 		break;
 	case H2W_GPIO:
 		msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX,
-			      uart3_off_gpi_table+0, 0);
+			      uart3_off_gpio_table+0, 0);
 		msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX,
-			      uart3_off_gpi_table+1, 0);
+			      uart3_off_gpio_table+1, 0);
 		bahamas_h2w_path = H2W_GPIO;
 		break;
 	}
@@ -983,6 +983,7 @@ static int h2w_power_read(struct gpio_chip *chip, unsigned n)
 {
 	return -1;
 }
+
 static int h2w_power_write(struct gpio_chip *chip, unsigned n, unsigned on)
 {
 	if (!vreg_h2w)
