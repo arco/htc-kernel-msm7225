@@ -40,6 +40,7 @@
 #define A11S_CLK_CNTL_ADDR (MSM_CSR_BASE + 0x100)
 #define A11S_CLK_SEL_ADDR (MSM_CSR_BASE + 0x104)
 #define A11S_VDD_SVS_PLEVEL_ADDR (MSM_CSR_BASE + 0x124)
+#define A11S_CLK_CTL_PLL2 (MSM_CLK_CTL_BASE + 0x33C)
 
 /*
  * ARM11 clock configuration for specific ACPU speeds
@@ -375,7 +376,7 @@ static void acpuclk_set_div(const struct clkctl_acpu_speed *hunt_s) {
 
 	if (hunt_s->a11clk_khz > 528000 && hunt_s->pll2_lval > 0) {
 		a11_div = 0;
-		writel(hunt_s->a11clk_khz/19200, MSM_CLK_CTL_BASE+0x33c);
+		writel(hunt_s->pll2_lval, A11S_CLK_CTL_PLL2);
 		udelay(50);
 	}
 	/* OC END */
@@ -439,6 +440,16 @@ static void acpuclk_set_div(const struct clkctl_acpu_speed *hunt_s) {
 		reg_clksel &= ~(0x3 << 1);
 		reg_clksel |= (hunt_s->ahbclk_div << 1);
 		writel(reg_clksel, A11S_CLK_SEL_ADDR);
+	}
+	/*
+	 * "Clear" PLL2
+	 */
+	if (hunt_s->a11clk_khz <= 528000 || hunt_s->pll2_lval <= 0){
+		/* Check we are not already "cleared" */
+		if(readl(A11S_CLK_CTL_PLL2) != 0x37){
+			writel(0x37, A11S_CLK_CTL_PLL2);
+			udelay(50);
+		}
 	}
 }
 
