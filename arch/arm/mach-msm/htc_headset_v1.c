@@ -80,7 +80,7 @@
 #include <mach/drv_callback.h>
 
 #ifdef CONFIG_HTC_AUDIOJACK_V1
-#include <mach/audio_jack_v1.h>
+#include <mach/audio_jack.h>
 #endif
 
 /* #define CONFIG_DEBUG_H2W */

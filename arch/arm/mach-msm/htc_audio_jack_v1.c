@@ -29,7 +29,7 @@
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
 #include <mach/h2w_v1.h>
-#include <mach/audio_jack_v1.h>
+#include <mach/audio_jack.h>
 #include <mach/drv_callback.h>
 #include <linux/wakelock.h>
 #include <linux/delay.h>
