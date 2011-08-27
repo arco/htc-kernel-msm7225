@@ -53,7 +53,7 @@ static unsigned int awake_ideal_freq;
  * that practically when sleep_ideal_freq==0 the awake_ideal_freq is used
  * also when suspended).
  */
-#define DEFAULT_SLEEP_IDEAL_FREQ 1
+#define DEFAULT_SLEEP_IDEAL_FREQ 352000
 static unsigned int sleep_ideal_freq;
 
 /*
@@ -251,8 +251,8 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	// at high loads)
 	if (cpu_load > max_cpu_load || delta_idle == 0)
 	{
-		if (policy->cur < policy->max && nr_running() > 0 &&
-			 (policy->cur < this_smartass->ideal_speed || (!suspended && delta_idle == 0) ||
+		if (policy->cur < policy->max &&
+			 (policy->cur < this_smartass->ideal_speed || delta_idle == 0 ||
 			  cputime64_sub(update_time, this_smartass->freq_change_time) >= up_rate_us))
 		{
 			this_smartass->force_ramp_up = 1;
@@ -607,6 +607,9 @@ static int cpufreq_governor_smartass(struct cpufreq_policy *new_policy,
 			pm_idle = cpufreq_idle;
 		}
 
+		if (this_smartass->cur_policy->cur < new_policy->max && !timer_pending(&this_smartass->timer))
+			reset_timer(cpu,this_smartass);
+
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
@@ -624,6 +627,10 @@ static int cpufreq_governor_smartass(struct cpufreq_policy *new_policy,
 			__cpufreq_driver_target(this_smartass->cur_policy,
 						new_policy->min, CPUFREQ_RELATION_L);
 		}
+
+		if (this_smartass->cur_policy->cur < new_policy->max && !timer_pending(&this_smartass->timer))
+			reset_timer(cpu,this_smartass);
+
 		break;
 
 	case CPUFREQ_GOV_STOP:
@@ -650,7 +657,7 @@ static void smartass_suspend(int cpu, int suspend)
 	struct cpufreq_policy *policy = this_smartass->cur_policy;
 	unsigned int new_freq;
 
-	if (!this_smartass->enable || sleep_ideal_freq==0) // disable behavior for sleep_ideal_freq==0
+	if (!this_smartass->enable)
 		return;
 
 	smartass_update_min_max(this_smartass,policy,suspend);
@@ -679,6 +686,8 @@ static void smartass_suspend(int cpu, int suspend)
 
 static void smartass_early_suspend(struct early_suspend *handler) {
 	int i;
+	if (suspended || sleep_ideal_freq==0) // disable behavior for sleep_ideal_freq==0
+		return;
 	suspended = 1;
 	for_each_online_cpu(i)
 		smartass_suspend(i,1);
@@ -686,6 +695,8 @@ static void smartass_early_suspend(struct early_suspend *handler) {
 
 static void smartass_late_resume(struct early_suspend *handler) {
 	int i;
+	if (!suspended) // already not suspended so nothing to do
+		return;
 	suspended = 0;
 	for_each_online_cpu(i)
 		smartass_suspend(i,0);
