@@ -173,7 +173,7 @@ inline static void smartass_update_min_max(struct smartass_info_s *this_smartass
 	}
 }
 
-inline static void smartass_update_min_max_allcpus() {
+inline static void smartass_update_min_max_allcpus(void) {
 	unsigned int i;
 	for_each_online_cpu(i) {
 		struct smartass_info_s *this_smartass = &per_cpu(smartass_info, i);
