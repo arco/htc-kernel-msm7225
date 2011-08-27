@@ -143,27 +143,29 @@ static struct clkctl_acpu_speed msm7227_turbo_tbl[] = {
 /* 7200a turbo mode, PLL0(mpll):245.76, PLL1(gpll):960, PLL2(bpll0):1056 */
 static struct clkctl_acpu_speed  msm72xx_tbl[] = {
 #if defined(CONFIG_TURBO_MODE)
-	{ 19200, ACPU_PLL_TCXO, 0, 0, 19200, 0, VDD_0, 30720, 0, 0, 4 },
-	{ 122880, ACPU_PLL_0, 4, 1, 61440, 1, VDD_1, 61440, 0, 0, 4 },
-	{ 160000, ACPU_PLL_1, 1, 5, 53333, 2, VDD_1, 61440, 0, 0, 6 },
-	{ 176000, ACPU_PLL_2, 2, 5, 88000, 1, VDD_1, 61440, 0, 0, 5 },
-	{ 245760, ACPU_PLL_0, 4, 0, 81920, 2, VDD_2, 61440, 0, 0, 5 },
-	{ 352000, ACPU_PLL_2, 2, 2, 88000, 3, VDD_4, 128000, 0, 3, 7 },
-	{ 480000, ACPU_PLL_1, 1, 1, 120000, 3, VDD_6, 120000, 0, 2, -1 },
-	{ 528000, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x1b },
-	{ 537600, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x1c },
-	{ 556800, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x1d },
-	{ 576000, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x1e },
-	{ 595200, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x1f },
-	{ 614400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x20 },
-	{ 633600, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x21 },
-	{ 652800, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x22 },
-	{ 672000, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x23 },
-	{ 691200, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x24 },
-	{ 710400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x25 },
-	{ 729600, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x26 },
-	{ 748800, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x27 },
-	{ 768000, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x28 },
+/* 0*/	{ 19200, ACPU_PLL_TCXO, 0, 0, 19200, 0, VDD_0, 30720, 0, 0, 3 },
+/* 1*/	{ 122880, ACPU_PLL_0, 4, 1, 61440, 1, VDD_2, 61440, 0, 0, 4 },
+/* 2*/	{ 160000, ACPU_PLL_1, 1, 5, 53333, 2, VDD_2, 61440, 0, 0, 6 },
+/* 3*/	{ 176000, ACPU_PLL_2, 2, 5, 88000, 1, VDD_2, 61440, 0, 0, 6 },
+/* 4*/	{ 245760, ACPU_PLL_0, 4, 0, 81920, 2, VDD_3, 61440, 0, 0, 6 },
+/* 5*/	{ 264000, ACPU_PLL_2, 2, 3, 88000, 2, VDD_3, 128000, 0, 0, 8 },
+/* 6*/	{ 352000, ACPU_PLL_2, 2, 2, 88000, 3, VDD_4, 128000, 0, 3, 13 },
+/* 7*/	{ 480000, ACPU_PLL_1, 1, 1, 120000, 3, VDD_5, 120000, 0, 4, 20 },
+/* 8*/	{ 518400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1, 0x1b },
+/* 9*/	{ 528000, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 5, -1 },
+/*10*/	{ 537600, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 6, -1, 0x1c },
+/*11*/	{ 556800, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 6, -1, 0x1d },
+/*12*/	{ 576000, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 6, -1, 0x1e },
+/*13*/	{ 595200, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 6, -1, 0x1f },
+/*14*/	{ 614400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x20 },
+/*15*/	{ 633600, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x21 },
+/*16*/	{ 652800, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x22 },
+/*17*/	{ 672000, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x23 },
+/*18*/	{ 691200, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x24 },
+/*19*/	{ 710400, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x25 },
+/*20*/	{ 729600, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x26 },
+/*21*/	{ 748800, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x27 },
+/*22*/	{ 768000, ACPU_PLL_2, 2, 1, 132000, 3, VDD_6, 160000, 0, 8, -1, 0x28 },
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 #else
 	{ 19200, ACPU_PLL_TCXO, 0, 0, 19200, 0, VDD_0, 30720, 0, 0, 4 },
@@ -194,27 +196,21 @@ static struct cpufreq_frequency_table msm7227_freq_table[] = {
 
 static struct cpufreq_frequency_table msm72xx_freq_table[] = {
 #if defined(CONFIG_TURBO_MODE)
-	{ 0, 122880 },
-	{ 1, 160000 },
-	{ 2, 176000 },
-	{ 3, 245760 },
-	{ 4, 352000 },
-	{ 5, 480000 },
-	{ 6, 528000 },
-	{ 7, 537600 },
-	{ 8, 556800 },
-	{ 9, 576000 },
-	{10, 595200 },
-	{11, 614400 },
-	{12, 633600 },
-	{13, 652800 },
-	{14, 672000 },
-	{15, 691200 },
-	{16, 710400 },
-	{17, 729600 },
-	{18, 748800 },
-	{19, 768000 },
-	{20, CPUFREQ_TABLE_END },
+	{ 0, 176000 },
+	{ 1, 264000 },
+	{ 2, 352000 },
+	{ 3, 518400 },
+	{ 4, 576000 },
+	{ 5, 614400 },
+	{ 6, 633600 },
+	{ 7, 652800 },
+	{ 8, 672000 },
+	{ 9, 691200 },
+	{10, 710400 },
+	{11, 729600 },
+	{12, 748800 },
+	{13, 768000 },
+	{14, CPUFREQ_TABLE_END },
 #else
 	{ 0, 19200 },
 	{ 1, 122880 },
@@ -374,7 +370,7 @@ static void acpuclk_set_div(const struct clkctl_acpu_speed *hunt_s) {
 	/* OC BEGIN */
 	a11_div=hunt_s->a11clk_src_div;
 
-	if (hunt_s->a11clk_khz > 528000 && hunt_s->pll2_lval > 0) {
+	if (hunt_s->a11clk_khz >= 518400 && hunt_s->pll2_lval > 0) {
 		a11_div = 0;
 		writel(hunt_s->pll2_lval, A11S_CLK_CTL_PLL2);
 		udelay(50);
@@ -444,7 +440,7 @@ static void acpuclk_set_div(const struct clkctl_acpu_speed *hunt_s) {
 	/*
 	 * "Clear" PLL2
 	 */
-	if (hunt_s->a11clk_khz <= 528000 || hunt_s->pll2_lval <= 0){
+	if (hunt_s->a11clk_khz < 518400 || hunt_s->pll2_lval <= 0){
 		/* Check we are not already "cleared" */
 		if(readl(A11S_CLK_CTL_PLL2) != 0x37){
 			writel(0x37, A11S_CLK_CTL_PLL2);
@@ -517,7 +513,7 @@ int acpuclk_set_rate(unsigned long rate, enum setrate_reason reason)
 
 	/* Set wait states for CPU inbetween frequency changes */
 	reg_clkctl = readl(A11S_CLK_CNTL_ADDR);
-	reg_clkctl |= (100 << 14); /* set WT_ST_CNT */
+	reg_clkctl |= (100 << 16); /* set WT_ST_CNT */
 	writel(reg_clkctl, A11S_CLK_CNTL_ADDR);
 
 	if (acpu_debug_mask & PERF_SWITCH_DEBUG)
