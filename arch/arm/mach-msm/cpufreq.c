@@ -163,7 +163,7 @@ static int msm_cpufreq_verify(struct cpufreq_policy *policy)
 
 static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 {
-#ifdef CONFIG_ARCH_MSM8X60
+#if defined(CONFIG_ARCH_MSM8X60) || defined(CONFIG_ARCH_MSM_ARM11)
 	int cur_freq;
 	int index;
 #endif
@@ -190,10 +190,14 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 #endif
 #endif
 
-#ifndef CONFIG_ARCH_MSM8X60
+#if !defined(CONFIG_ARCH_MSM8X60) && !defined(CONFIG_ARCH_MSM_ARM11)
 	policy->cur = acpuclk_get_rate();
 #else
+#ifdef CONFIG_ARCH_MSM8X60
 	cur_freq = acpuclk_get_rate(policy->cpu);
+#else
+	cur_freq = acpuclk_get_rate();
+#endif
 	if (cpufreq_frequency_table_target(policy, table, cur_freq,
 				CPUFREQ_RELATION_H, &index)) {
 		pr_info("cpufreq: cpu%d at invalid freq: %d\n",
@@ -203,8 +207,12 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 
 	if (cur_freq != table[index].frequency) {
 		int ret = 0;
+#ifdef CONFIG_ARCH_MSM8X60
 		ret = acpuclk_set_rate(policy->cpu, table[index].frequency,
 				SETRATE_CPUFREQ);
+#else
+		ret = acpuclk_set_rate(table[index].frequency*1000,SETRATE_CPUFREQ);
+#endif
 		if (ret)
 			return ret;
 		pr_info("cpufreq: cpu%d init at %d switching to %d\n",
