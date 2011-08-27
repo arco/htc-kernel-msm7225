@@ -74,9 +74,12 @@
 
 #include <mach/atmega_microp.h>
 #include <mach/htc_battery.h>
-
 #include <mach/htc_pwrsink.h>
+
+#ifdef CONFIG_PERFLOCK
 #include <mach/perflock.h>
+#endif
+
 #include <mach/drv_callback.h>
 #include <mach/msm_rpcrouter.h>
 #include <mach/msm_iomap.h>
@@ -1225,6 +1228,7 @@ static struct msm_acpu_clock_platform_data buzz_clock_data = {
 #endif
 };
 
+#ifdef CONFIG_PERFLOCK
 static unsigned buzz_perf_acpu_table[] = {
 	245760000,
 	480000000,
@@ -1235,6 +1239,7 @@ static struct perflock_platform_data buzz_perflock_data = {
 	.perf_acpu_table = buzz_perf_acpu_table,
 	.table_size = ARRAY_SIZE(buzz_perf_acpu_table),
 };
+#endif
 
 static void __init buzz_init(void)
 {
@@ -1266,8 +1271,9 @@ static void __init buzz_init(void)
 	msm_hw_reset_hook = buzz_reset;
 
 	msm_acpu_clock_init(&buzz_clock_data);
+#ifdef CONFIG_PERFLOCK
 	perflock_init(&buzz_perflock_data);
-	/* adjust GPIOs based on bootloader request */
+#endif
 
 #if defined(CONFIG_MSM_SERIAL_DEBUGGER)
 	if (!opt_disable_uart3)
