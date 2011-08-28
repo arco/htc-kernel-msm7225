@@ -660,9 +660,6 @@ static void __init acpuclk_init(void)
 	if (rc < 0)
 		pr_err("Setting AXI min rate failed!\n");
 
-	for (speed = acpu_freq_tbl; speed->a11clk_khz != 0; speed++)
-		;
-
 	max_s = speed - 1;
 	max_axi_rate = max_s->axiclk_khz * 1000;
 
