@@ -29,6 +29,7 @@ Contents:
 2.4  Ondemand
 2.5  Conservative
 2.6  Interactive
+2.7  SmartassV2
 
 3.   The Governor Interface in the CPUfreq Core
 
@@ -217,7 +218,7 @@ workload.  Default is 80000 uS.
 go_maxspeed_load: The CPU load at which to ramp to max speed.  Default
 is 85.
 
-2.8 SmartassV2
+2.7 SmartassV2
 ---------------
 
 The CPUfreq governor "smartassV2", like other governors, aims to balance
