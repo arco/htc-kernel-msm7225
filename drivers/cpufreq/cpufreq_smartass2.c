@@ -116,13 +116,15 @@ static atomic_t active_count = ATOMIC_INIT(0);
 
 struct smartass_info_s {
 	struct cpufreq_policy *cur_policy;
+	struct cpufreq_frequency_table *freq_table;
 	struct timer_list timer;
 	u64 time_in_idle;
 	u64 idle_exit_time;
 	u64 freq_change_time;
 	u64 freq_change_time_in_idle;
 	int cur_cpu_load;
-	unsigned int force_ramp_up;
+	int old_freq;
+	int ramp_dir;
 	unsigned int enable;
 	int ideal_speed;
 };
@@ -138,9 +140,14 @@ static spinlock_t cpumask_lock;
 
 static unsigned int suspended;
 
+#define dprintk(flag,msg...) do { \
+	if (debug_mask & flag) printk(KERN_DEBUG msg); \
+	} while (0)
+
 enum {
 	SMARTASS_DEBUG_JUMPS=1,
-	SMARTASS_DEBUG_LOAD=2
+	SMARTASS_DEBUG_LOAD=2,
+	SMARTASS_DEBUG_ALG=4
 };
 
 /*
@@ -183,9 +190,9 @@ inline static void smartass_update_min_max_allcpus(void) {
 }
 
 inline static unsigned int validate_freq(struct cpufreq_policy *policy, int freq) {
-	if (freq > policy->max)
+	if (freq > (int)policy->max)
 		return policy->max;
-	if (freq < policy->min)
+	if (freq < (int)policy->min)
 		return policy->min;
 	return freq;
 }
@@ -211,17 +218,69 @@ inline static int work_cpumask_test_and_clear(unsigned long cpu) {
 	return res;
 }
 
+inline static int target_freq(struct cpufreq_policy *policy, struct smartass_info_s *this_smartass,
+			      int new_freq, int old_freq, int prefered_relation) {
+	int index, target;
+	struct cpufreq_frequency_table *table = this_smartass->freq_table;
+
+	if (new_freq == old_freq)
+		return 0;
+	new_freq = validate_freq(policy,new_freq);
+	if (new_freq == old_freq)
+		return 0;
+
+	if (table &&
+	    !cpufreq_frequency_table_target(policy,table,new_freq,prefered_relation,&index))
+	{
+		target = table[index].frequency;
+		if (target == old_freq) {
+			// if for example we are ramping up to *at most* current + ramp_up_step
+			// but there is no such frequency higher than the current, try also
+			// to ramp up to *at least* current + ramp_up_step.
+			if (new_freq > old_freq && prefered_relation==CPUFREQ_RELATION_H
+			    && !cpufreq_frequency_table_target(policy,table,new_freq,
+							       CPUFREQ_RELATION_L,&index))
+				target = table[index].frequency;
+			// simlarly for ramping down:
+			else if (new_freq < old_freq && prefered_relation==CPUFREQ_RELATION_L
+				&& !cpufreq_frequency_table_target(policy,table,new_freq,
+								   CPUFREQ_RELATION_H,&index))
+				target = table[index].frequency;
+		}
+
+		if (target == old_freq) {
+			// We should not get here:
+			// If we got here we tried to change to a validated new_freq which is different
+			// from old_freq, so there is no reason for us to remain at same frequency.
+			printk(KERN_WARNING "Smartass: frequency change failed: %d to %d => %d\n",
+			       old_freq,new_freq,target);
+			return 0;
+		}
+	}
+	else target = new_freq;
+
+	__cpufreq_driver_target(policy, target, prefered_relation);
+
+	dprintk(SMARTASS_DEBUG_JUMPS,"SmartassQ: jumping from %d to %d => %d (%d)\n",
+		old_freq,new_freq,target,policy->cur);
+
+	return target;
+}
+
 static void cpufreq_smartass_timer(unsigned long cpu)
 {
 	u64 delta_idle;
 	u64 delta_time;
 	int cpu_load;
+	int old_freq;
 	u64 update_time;
 	u64 now_idle;
+	int queued_work = 0;
 	struct smartass_info_s *this_smartass = &per_cpu(smartass_info, cpu);
 	struct cpufreq_policy *policy = this_smartass->cur_policy;
 
 	now_idle = get_cpu_idle_time_us(cpu, &update_time);
+	old_freq = policy->cur;
 
 	if (this_smartass->idle_exit_time == 0 || update_time == this_smartass->idle_exit_time)
 		return;
@@ -241,38 +300,48 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	else
 		cpu_load = 100 * (unsigned int)(delta_time - delta_idle) / (unsigned int)delta_time;
 
-	if (debug_mask & SMARTASS_DEBUG_LOAD)
-		printk(KERN_DEBUG "smartassT @ %d: load %d (delta_time %llu)\n",policy->cur,cpu_load,delta_time);
+	dprintk(SMARTASS_DEBUG_LOAD,"smartassT @ %d: load %d (delta_time %llu)\n",
+		old_freq,cpu_load,delta_time);
 
 	this_smartass->cur_cpu_load = cpu_load;
+	this_smartass->old_freq = old_freq;
 
 	// Scale up if load is above max or if there where no idle cycles since coming out of idle,
 	// or when we are above our max speed for a very long time (should only happend if entering sleep
 	// at high loads)
 	if (cpu_load > max_cpu_load || delta_idle == 0)
 	{
-		if (policy->cur < policy->max &&
-			 (policy->cur < this_smartass->ideal_speed || delta_idle == 0 ||
+		if (old_freq < policy->max &&
+			 (old_freq < this_smartass->ideal_speed || delta_idle == 0 ||
 			  cputime64_sub(update_time, this_smartass->freq_change_time) >= up_rate_us))
 		{
-			this_smartass->force_ramp_up = 1;
+			dprintk(SMARTASS_DEBUG_ALG,"smartassT @ %d ramp up: load %d (delta_idle %llu)\n",
+				old_freq,cpu_load,delta_idle);
+			this_smartass->ramp_dir = 1;
 			work_cpumask_set(cpu);
 			queue_work(up_wq, &freq_scale_work);
+			queued_work = 1;
 		}
+		else this_smartass->ramp_dir = 0;
 	}
 	/*
 	 * Do not scale down unless we have been at this frequency for the
 	 * minimum sample time.
 	 */
-	else if (policy->cur > this_smartass->ideal_speed ||
-		 (policy->cur > policy->min &&
+	else if (cpu_load < min_cpu_load && old_freq > policy->min &&
+		 (old_freq > this_smartass->ideal_speed ||
 		  cputime64_sub(update_time, this_smartass->freq_change_time) >= down_rate_us))
 	{
+		dprintk(SMARTASS_DEBUG_ALG,"smartassT @ %d ramp down: load %d (delta_idle %llu)\n",
+			old_freq,cpu_load,delta_idle);
+		this_smartass->ramp_dir = -1;
 		work_cpumask_set(cpu);
 		queue_work(down_wq, &freq_scale_work);
+		queued_work = 1;
 	}
+	else this_smartass->ramp_dir = 0;
 
-	if (policy->cur < policy->max && !timer_pending(&this_smartass->timer))
+	if (!queued_work && old_freq < policy->max)
 		reset_timer(cpu,this_smartass);
 }
 
@@ -301,23 +370,28 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 	unsigned int cpu;
 	int new_freq;
 	int old_freq;
-	unsigned int force_ramp_up;
-	int cpu_load;
+	int ramp_dir;
 	struct smartass_info_s *this_smartass;
 	struct cpufreq_policy *policy;
 	unsigned int relation = CPUFREQ_RELATION_L;
 	for_each_possible_cpu(cpu) {
+		this_smartass = &per_cpu(smartass_info, cpu);
 		if (!work_cpumask_test_and_clear(cpu))
 			continue;
 
-		this_smartass = &per_cpu(smartass_info, cpu);
-		policy = this_smartass->cur_policy;
-		old_freq = policy->cur;
-		cpu_load = this_smartass->cur_cpu_load;
-		force_ramp_up = this_smartass->force_ramp_up && nr_running() > 1;
-		this_smartass->force_ramp_up = 0;
+		ramp_dir = this_smartass->ramp_dir;
+		this_smartass->ramp_dir = 0;
 
-		if (force_ramp_up || cpu_load > max_cpu_load) {
+		old_freq = this_smartass->old_freq;
+		policy = this_smartass->cur_policy;
+
+		if (old_freq != policy->cur) {
+			// frequency was changed by someone else?
+			printk(KERN_WARNING "Smartass: frequency changed by 3rd party: %d to %d\n",
+			       old_freq,policy->cur);
+			new_freq = old_freq;
+		}
+		else if (ramp_dir > 0 && nr_running() > 1) {
 			if (old_freq < this_smartass->ideal_speed)
 				new_freq = this_smartass->ideal_speed;
 			else if (ramp_up_step) {
@@ -328,8 +402,10 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 				new_freq = policy->max;
 				relation = CPUFREQ_RELATION_H;
 			}
+			dprintk(SMARTASS_DEBUG_ALG,"smartassQ @ %d ramp up: ramp_dir=%d ideal=%d\n",
+				old_freq,ramp_dir,this_smartass->ideal_speed);
 		}
-		else if (cpu_load < min_cpu_load) {
+		else if (ramp_dir < 0) {
 			if (old_freq > this_smartass->ideal_speed) {
 				new_freq = this_smartass->ideal_speed;
 				relation = CPUFREQ_RELATION_H;
@@ -337,34 +413,32 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 			else if (ramp_down_step)
 				new_freq = old_freq - ramp_down_step;
 			else {
-				cpu_load += 100 - max_cpu_load; // dummy load.
+				int cpu_load = this_smartass->cur_cpu_load
+						+ 100 - max_cpu_load; // dummy load.
 				new_freq = old_freq * cpu_load / 100;
+				if (new_freq > old_freq)
+					new_freq = old_freq -1;
 			}
+			dprintk(SMARTASS_DEBUG_ALG,"smartassQ @ %d ramp down: ramp_dir=%d ideal=%d\n",
+				old_freq,ramp_dir,this_smartass->ideal_speed);
 		}
-		else new_freq = old_freq;
-
-		new_freq = validate_freq(policy,new_freq);
-
-		if (new_freq != old_freq) {
-			__cpufreq_driver_target(policy, new_freq, relation);
-			if (policy->cur == old_freq) {
-				if (new_freq > old_freq && relation==CPUFREQ_RELATION_H)
-					__cpufreq_driver_target(policy, new_freq, CPUFREQ_RELATION_L);
-				else if (new_freq < old_freq && relation==CPUFREQ_RELATION_L)
-					__cpufreq_driver_target(policy, new_freq, CPUFREQ_RELATION_H);
-			}
-
-			if (debug_mask & SMARTASS_DEBUG_JUMPS)
-				printk(KERN_DEBUG "SmartassQ: jumping from %d to %d => %d\n",
-				       old_freq,new_freq,policy->cur);
-
-			if (policy->cur == old_freq)
-				printk(KERN_WARNING "Smartass: frequency change failed: %d to %d => %d\n",
-				       old_freq,new_freq,policy->cur);
-			else
-				this_smartass->freq_change_time_in_idle =
-					get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
+		else {
+			new_freq = old_freq;
+			dprintk(SMARTASS_DEBUG_ALG,"smartassQ @ %d nothing: ramp_dir=%d nr_running=%lu\n",
+				old_freq,ramp_dir,nr_running());
 		}
+
+		new_freq = target_freq(policy,this_smartass,new_freq,old_freq,relation);
+		if (new_freq)
+			this_smartass->freq_change_time_in_idle =
+				get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
+
+		if (new_freq < policy->max)
+			reset_timer(cpu,this_smartass);
+		// if we are maxed out, it is pointless to use the timer
+		// (idle cycles wake up the timer when the timer comes)
+		else if (timer_pending(&this_smartass->timer))
+			del_timer(&this_smartass->timer);
 	}
 }
 
@@ -593,6 +667,10 @@ static int cpufreq_governor_smartass(struct cpufreq_policy *new_policy,
 
 		smartass_update_min_max(this_smartass,new_policy,suspended);
 
+		this_smartass->freq_table = cpufreq_frequency_get_table(cpu);
+		if (!this_smartass->freq_table)
+			printk(KERN_WARNING "Smartass: no frequency table for cpu %d?!\n",cpu);
+
 		smp_wmb();
 
 		// Do not register the idle hook and create sysfs
@@ -616,14 +694,12 @@ static int cpufreq_governor_smartass(struct cpufreq_policy *new_policy,
 		smartass_update_min_max(this_smartass,new_policy,suspended);
 
 		if (this_smartass->cur_policy->cur > new_policy->max) {
-			//if (debug_mask & SMARTASS_DEBUG_JUMPS)
-				printk(KERN_DEBUG "SmartassI: jumping to new max freq: %d\n",new_policy->max);
+			dprintk(SMARTASS_DEBUG_JUMPS,"SmartassI: jumping to new max freq: %d\n",new_policy->max);
 			__cpufreq_driver_target(this_smartass->cur_policy,
 						new_policy->max, CPUFREQ_RELATION_H);
 		}
 		else if (this_smartass->cur_policy->cur < new_policy->min) {
-			//if (debug_mask & SMARTASS_DEBUG_JUMPS)
-				printk(KERN_DEBUG "SmartassI: jumping to new min freq: %d\n",new_policy->min);
+			dprintk(SMARTASS_DEBUG_JUMPS,"SmartassI: jumping to new min freq: %d\n",new_policy->min);
 			__cpufreq_driver_target(this_smartass->cur_policy,
 						new_policy->min, CPUFREQ_RELATION_L);
 		}
@@ -664,8 +740,7 @@ static void smartass_suspend(int cpu, int suspend)
 	if (!suspend) { // resume at max speed:
 		new_freq = validate_freq(policy,sleep_wakeup_freq);
 
-		if (debug_mask & SMARTASS_DEBUG_JUMPS)
-			printk(KERN_DEBUG "SmartassS: awaking at %d\n",new_freq);
+		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: awaking at %d\n",new_freq);
 
 		__cpufreq_driver_target(policy, new_freq,
 					CPUFREQ_RELATION_L);
@@ -677,8 +752,7 @@ static void smartass_suspend(int cpu, int suspend)
 		this_smartass->freq_change_time_in_idle =
 			get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
 
-		if (debug_mask & SMARTASS_DEBUG_JUMPS)
-			printk(KERN_DEBUG "SmartassS: suspending at %d\n",policy->cur);
+		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: suspending at %d\n",policy->cur);
 	}
 
 	reset_timer(smp_processor_id(),this_smartass);
@@ -735,7 +809,7 @@ static int __init cpufreq_smartass_init(void)
 		this_smartass = &per_cpu(smartass_info, i);
 		this_smartass->enable = 0;
 		this_smartass->cur_policy = 0;
-		this_smartass->force_ramp_up = 0;
+		this_smartass->ramp_dir = 0;
 		this_smartass->time_in_idle = 0;
 		this_smartass->idle_exit_time = 0;
 		this_smartass->freq_change_time = 0;
