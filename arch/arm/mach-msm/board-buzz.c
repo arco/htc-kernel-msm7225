@@ -74,9 +74,12 @@
 
 #include <mach/atmega_microp.h>
 #include <mach/htc_battery.h>
-
 #include <mach/htc_pwrsink.h>
+
+#ifdef CONFIG_PERFLOCK
 #include <mach/perflock.h>
+#endif
+
 #include <mach/drv_callback.h>
 #include <mach/msm_rpcrouter.h>
 #include <mach/msm_iomap.h>
@@ -133,7 +136,7 @@ static struct platform_device htc_headset_gpio = {
 	.name	= "HTC_HEADSET_GPIO",
 	.id	= -1,
 	.dev	= {
-		.platform_data	= &htc_headset_gpio_data,
+		.platform_data = &htc_headset_gpio_data,
 	},
 };
 
@@ -150,7 +153,7 @@ static struct platform_device htc_headset_microp = {
 	.name	= "HTC_HEADSET_MICROP",
 	.id	= -1,
 	.dev	= {
-		.platform_data	= &htc_headset_microp_data,
+		.platform_data = &htc_headset_microp_data,
 	},
 };
 
@@ -173,8 +176,8 @@ static struct htc_battery_platform_data htc_battery_pdev_data = {
 };
 
 static struct platform_device htc_battery_pdev = {
-	.name = "htc_battery",
-	.id = -1,
+	.name	= "htc_battery",
+	.id	= -1,
 	.dev	= {
 		.platform_data = &htc_battery_pdev_data,
 	},
@@ -183,16 +186,16 @@ static int capella_cm3602_power(int pwr_device, uint8_t enable);
 
 static struct microp_function_config microp_functions[] = {
 	{
-		.name   = "microp_intrrupt",
+		.name = "microp_intrrupt",
 		.category = MICROP_FUNCTION_INTR,
 	},
 	{
-		.name   = "reset-int",
+		.name = "reset-int",
 		.category = MICROP_FUNCTION_RESET_INT,
 		.int_pin = 1 << 8,
 	},
 	{
-		.name   = "oj",
+		.name = "oj",
 		.category = MICROP_FUNCTION_OJ,
 		.int_pin = 1 << 12,
 	},
@@ -266,21 +269,21 @@ static struct bma150_platform_data buzz_g_sensor_pdata = {
 
 static struct platform_device microp_devices[] = {
 	{
-		.name = "lightsensor_microp",
-		.dev = {
+		.name	= "lightsensor_microp",
+		.dev	= {
 			.platform_data = &lightsensor_data,
 		},
 	},
 	{
-		.name = "leds-microp",
-		.id = -1,
-		.dev = {
+		.name	= "leds-microp",
+		.id	= -1,
+		.dev	= {
 			.platform_data = &microp_leds_data,
 		},
 	},
 	{
-		.name = BMA150_G_SENSOR_NAME,
-		.dev = {
+		.name	= BMA150_G_SENSOR_NAME,
+		.dev	= {
 			.platform_data = &buzz_g_sensor_pdata,
 		},
 	},
@@ -288,28 +291,28 @@ static struct platform_device microp_devices[] = {
 		.name	= "HTC_HEADSET_MGR",
 		.id	= -1,
 		.dev	= {
-			.platform_data	= &htc_headset_mgr_data,
+			.platform_data = &htc_headset_mgr_data,
 		},
 	},
 };
 
 static struct platform_device microp_devices_xc[] = {
 	{
-		.name = "lightsensor_microp",
-		.dev = {
+		.name	= "lightsensor_microp",
+		.dev	= {
 			.platform_data = &lightsensor_data,
 		},
 	},
 	{
-		.name = "leds-microp",
-		.id = -1,
-		.dev = {
+		.name	= "leds-microp",
+		.id	= -1,
+		.dev	= {
 			.platform_data = &microp_leds_data_xc,
 		},
 	},
 	{
-		.name = BMA150_G_SENSOR_NAME,
-		.dev = {
+		.name	= BMA150_G_SENSOR_NAME,
+		.dev	= {
 			.platform_data = &buzz_g_sensor_pdata,
 		},
 	},
@@ -317,7 +320,7 @@ static struct platform_device microp_devices_xc[] = {
 		.name	= "HTC_HEADSET_MGR",
 		.id	= -1,
 		.dev	= {
-			.platform_data	= &htc_headset_mgr_data,
+			.platform_data = &htc_headset_mgr_data,
 		},
 	},
 };
@@ -360,9 +363,9 @@ static struct gpio_led_platform_data buzz_leds_data = {
 };
 
 static struct platform_device buzz_leds = {
-	.name = "leds-gpio",
-	.id = -1,
-	.dev = {
+	.name	= "leds-gpio",
+	.id	= -1,
+	.dev	= {
 		.platform_data = &buzz_leds_data,
 	},
 };
@@ -558,8 +561,8 @@ static struct android_usb_platform_data android_usb_pdata = {
 
 static struct platform_device android_usb_device = {
 	.name	= "android_usb",
-	.id		= -1,
-	.dev		= {
+	.id	= -1,
+	.dev	= {
 		.platform_data = &android_usb_pdata,
 	},
 };
@@ -682,12 +685,9 @@ static struct msm_pmem_setting pmem_setting = {
 };
 
 #ifdef CONFIG_MSM_CAMERA
-
 static int camera_power_on_init(void)
 {
 	int rc=0;
-
-//	printk(KERN_INFO "%s():\n", __func__);
 
 	gpio_request(BUZZ_GPIO_VCM_PWDN, "cam_pwr_on");
 	gpio_direction_output(BUZZ_GPIO_VCM_PWDN, 0);
@@ -861,8 +861,8 @@ static struct platform_device capella_cm3602 = {
 };
 /* End Proximity Sensor (Capella_CM3602)*/
 
-#define CURCIAL_OJ_MOTION            39
-static void curcial_oj_shutdown (int	enable)
+#define CURCIAL_OJ_MOTION 39
+static void curcial_oj_shutdown (int enable)
 {
 	uint8_t cmd[3];
 	static uint32_t oj_motion_on[] = {
@@ -878,27 +878,15 @@ static void curcial_oj_shutdown (int	enable)
 
 	cmd[2] = 0x80;
 	if (enable) {
-	/*keep O(L) enable by HW*/
-		/*microp_i2c_write(0x91, cmd, 3);*/
 		config_gpio_table(oj_motion_off, ARRAY_SIZE(oj_motion_off));
 	} else {
-		/*microp_i2c_write(0x90, cmd, 3);*/
 		config_gpio_table(oj_motion_on, ARRAY_SIZE(oj_motion_on));
 	}
-
 }
 
 static int curcial_oj_poweron(int on)
 {
-/*
-	gpio_set_value(CURCIAL_OJ_POWER, on);
-
-	if (gpio_get_value(CURCIAL_OJ_POWER) != on) {
-		printk(KERN_ERR "%s:OJ:power status fail \n", __func__);
-		return 0;
-	}
-	*/
-		printk(KERN_ERR "%s:OJ:power status ok \n", __func__);
+	printk(KERN_ERR "%s:OJ:power status ok \n", __func__);
 	return 1;
 }
 #define BUZZ_MICROP_VER	0x05
@@ -907,7 +895,6 @@ static void curcial_oj_adjust_xy(uint8_t *data, int16_t *mSumDeltaX, int16_t *mS
 {
 	int8_t 	deltaX;
 	int8_t 	deltaY;
-
 
 	if (data[2] == 0x80)
 		data[2] = 0x81;
@@ -1225,6 +1212,7 @@ static struct msm_acpu_clock_platform_data buzz_clock_data = {
 #endif
 };
 
+#ifdef CONFIG_PERFLOCK
 static unsigned buzz_perf_acpu_table[] = {
 	245760000,
 	480000000,
@@ -1235,6 +1223,7 @@ static struct perflock_platform_data buzz_perflock_data = {
 	.perf_acpu_table = buzz_perf_acpu_table,
 	.table_size = ARRAY_SIZE(buzz_perf_acpu_table),
 };
+#endif
 
 static void __init buzz_init(void)
 {
@@ -1266,8 +1255,9 @@ static void __init buzz_init(void)
 	msm_hw_reset_hook = buzz_reset;
 
 	msm_acpu_clock_init(&buzz_clock_data);
+#ifdef CONFIG_PERFLOCK
 	perflock_init(&buzz_perflock_data);
-	/* adjust GPIOs based on bootloader request */
+#endif
 
 #if defined(CONFIG_MSM_SERIAL_DEBUGGER)
 	if (!opt_disable_uart3)
@@ -1285,8 +1275,8 @@ static void __init buzz_init(void)
 #else
 	msm_add_serial_devices(0);
 #endif
-
 	msm_add_serial_devices(2);
+
 #ifdef CONFIG_USB_FUNCTION
 	msm_register_usb_phy_init_seq(buzz_phy_init_seq);
 	msm_add_usb_id_pin_gpio(BUZZ_GPIO_USB_ID_PIN);
@@ -1320,7 +1310,7 @@ static void __init buzz_init(void)
 
 	if (properties_kobj)
 		rc = sysfs_create_group(properties_kobj,
-					 &buzz_properties_attr_group);
+					&buzz_properties_attr_group);
 	if (!properties_kobj || rc)
 		pr_err("failed to create board_properties\n");
 
