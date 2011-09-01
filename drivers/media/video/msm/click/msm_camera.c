@@ -2176,10 +2176,12 @@ long msm_unregister(struct msm_driver *drv,
 	mutex_lock(&drv->vmsm->msm_sem);
 	if (!strcmp(drv->vmsm->apps_id, id)) {
 		drv->vmsm->apps_id = NULL;
-		drv->vmsm = NULL;
 		rc = 0;
 	}
 	mutex_unlock(&drv->vmsm->msm_sem);
+
+	if (!rc)
+		drv->vmsm = NULL;
 
 	return rc;
 }
