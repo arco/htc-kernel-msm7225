@@ -101,6 +101,10 @@
 #define MAX_SENSOR_NUM  3
 #define MAX_SENSOR_NAME 32
 
+#define PP_SNAP  0x01
+#define PP_RAW_SNAP ((0x01)<<1)
+#define PP_PREV  ((0x01)<<2)
+
 /*****************************************************
  *  enum
  *****************************************************/

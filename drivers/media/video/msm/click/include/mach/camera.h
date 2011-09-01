@@ -120,7 +120,7 @@ struct msm_device {
 	int  croplen;
 
 	struct mutex pict_pp_lock;
-	uint8_t pict_pp;
+	uint32_t pict_pp;
 
 	int sidx;
 	struct msm_sensor_ctrl sctrl;
@@ -199,6 +199,7 @@ struct msm_driver {
 
 	unsigned int (*drv_poll) (struct file *, struct poll_table_struct *,
 		struct msm_device *msm);
+	int (*release)(struct file *, struct msm_device *);
 };
 
 unsigned int msm_poll(struct file *, struct poll_table_struct *);
