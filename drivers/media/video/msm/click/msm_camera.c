@@ -1911,16 +1911,19 @@ static long msm_open_proc(struct msm_device *msm)
 				msm->pdev);
 			if (rc < 0) {
 				CDBG("vfe_init failed at %ld\n", rc);
+				msm->opencnt -= 1;
 				goto msm_open_proc_done;
 			}
 			rc = msm->sctrl.s_init(&pdata->sinfo[msm->sidx]);
 			if (rc < 0) {
 				CDBG("sensor init at %ld\n", rc);
+				msm->opencnt -= 1;
 				goto msm_open_proc_done;
 			}
 		} else{
 				rc = -ENODEV;
 				CDBG_ERR("vfe_init pointer dosent exist \n");
+				msm->opencnt -= 1;
 				goto msm_open_proc_done;
 		}
 
