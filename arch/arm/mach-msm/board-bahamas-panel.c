@@ -116,12 +116,12 @@ static struct mddi_table hitachi_deinit_tb[] = {
 };
 
 static struct mddi_table wintek_init_tb[] = {
-	{0x0F, 0x1401,  0},	/*set frame rate to 68.2Hz*/
+	{0x0F, 0x0b01,  0},	/*set frame rate to 68.2Hz*/
 	{0x11, 0x0019,  0},
 	{0x12, 0x1101,  0},
 	{0x13, 0x007F,  0},
 
-	{0x14, 0x6c68,  0}, /* flicker */
+	{0x14, 0x6b68,  0}, /* flicker */
 	{0x10, 0x0500,  0},
 	{0x15, 0x0040,  0}, /* flicker */
 
@@ -174,7 +174,7 @@ static struct mddi_table wintek_deinit_tb[] = {
 static struct mddi_table samsung_init_tb[] = {
 	/* Power on sequence */
 	{0x0f, 0x0f01, 0},
-	{0x0b, 0x8100, 0},	/*set frame rate to 69Hz*/
+	{0x0b, 0x8101, 0},	/*set frame rate to 69Hz*/
 	/* Power setting sequence */
 	{0x11, 0x0018, 0},
 	{0x12, 0x3101, 0},
@@ -265,36 +265,36 @@ eid_mddi_power_client(struct msm_mddi_client_data *cdata, int on)
 
 		gpio_set_value(BAHAMAS_V_VDDE2E_VDD2_GPIO, 1);
 
-		msleep(3);
+		hr_msleep(3);
 		id = PM_VREG_PDOWN_AUX_ID;
 		msm_proc_comm(PCOM_VREG_PULLDOWN, &on_off, &id);
 		vreg_enable(vreg_lcm_2v6);
 		if (machine_is_bahamas() || machine_is_clickc()) {
-			msleep(1);
+			hr_msleep(1);
 			id = PM_VREG_PDOWN_RFRX2_ID;
 			msm_proc_comm(PCOM_VREG_PULLDOWN, &on_off, &id);
 			vreg_enable(vreg_lcm_2v85);
 		}
-		msleep(3);
+		hr_msleep(3);
 		gpio_set_value(BAHAMAS_MDDI_RSTz, 1);
-		msleep(10);
+		hr_msleep(10);
 	} else {
 		gpio_set_value(BAHAMAS_MDDI_RSTz, 0);
-		msleep(10);
+		hr_msleep(10);
 		on_off = 1;
 		if (machine_is_bahamas() || machine_is_clickc()) {
 			vreg_disable(vreg_lcm_2v6);
 			id = PM_VREG_PDOWN_RFRX2_ID;
 			msm_proc_comm(PCOM_VREG_PULLDOWN, &on_off, &id);
-			msleep(1);
+			hr_msleep(1);
 		}
 		vreg_disable(vreg_lcm_2v85);
 		id = PM_VREG_PDOWN_AUX_ID;
 		msm_proc_comm(PCOM_VREG_PULLDOWN, &on_off, &id);
-		msleep(5);
+		hr_msleep(5);
 
 		gpio_set_value(BAHAMAS_V_VDDE2E_VDD2_GPIO, 0);
-		msleep(200);
+		hr_msleep(200);
 
 		id = PM_VREG_PDOWN_MDDI_ID;
 		msm_proc_comm(PCOM_VREG_PULLDOWN, &on_off, &id);
