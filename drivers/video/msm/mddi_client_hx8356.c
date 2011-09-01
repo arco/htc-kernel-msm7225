@@ -36,7 +36,7 @@
 #include <mach/debug_display.h>
 
 
-#if 1
+#if 0
 #define B(s...) printk(s)
 #else
 #define B(s...) do {} while (0)
