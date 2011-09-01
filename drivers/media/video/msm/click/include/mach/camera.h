@@ -101,6 +101,10 @@ struct msm_sync {
         struct list_head get_pp_q;
         wait_queue_head_t get_pp_wait;
 
+	spinlock_t af_status_lock;
+	struct msm_ctrl_cmd af_status;
+	int af_flag;
+	wait_queue_head_t af_status_wait;
 	struct hlist_head frame;
 	struct hlist_head stats;
 };

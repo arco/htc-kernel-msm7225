@@ -1494,6 +1494,76 @@ pp_done:
 pp_fail:
 	return rc;
 }
+
+static int msm_af_status_pending(struct msm_device *msm)
+{
+	int rc;
+	unsigned long flags;
+	spin_lock_irqsave(&msm->sync.af_status_lock, flags);
+	rc = msm->sync.af_flag;
+	spin_unlock_irqrestore(&msm->sync.af_status_lock, flags);
+	return rc;
+}
+static long msm_af_control(void __user *arg,
+	struct msm_device *msm)
+{
+	unsigned long flags;
+	int timeout;
+	long rc = 0;
+	if (copy_from_user(&msm->sync.af_status,
+			arg, sizeof(struct msm_ctrl_cmd))) {
+		rc = -EFAULT;
+		goto end;
+	}
+	timeout = (int)msm->sync.af_status.timeout_ms;
+	if (timeout > 0) {
+		rc = wait_event_timeout(msm->sync.af_status_wait,
+			msm_af_status_pending(msm),
+			msecs_to_jiffies(timeout));
+		CDBG("msm_af_control: rc = %ld\n", rc);
+		if (rc == 0) {
+			CDBG("msm_af_control: timed out\n");
+			rc = -ETIMEDOUT;
+			goto end;
+		}
+	} else
+		rc = wait_event_interruptible(msm->sync.af_status_wait,
+			msm_af_status_pending(msm));
+	if (rc < 0) {
+		rc = -EAGAIN;
+		goto end;
+	}
+	spin_lock_irqsave(&msm->sync.af_status_lock, flags);
+	if (msm->sync.af_flag < 0) {
+		msm->sync.af_status.type = 0xFFFF;
+		msm->sync.af_status.status = 0xFFFF;
+	}
+	msm->sync.af_flag = 0;
+	spin_unlock_irqrestore(&msm->sync.af_status_lock, flags);
+	if (copy_to_user((void *)arg,
+			&msm->sync.af_status,
+			sizeof(struct msm_ctrl_cmd))) {
+		CDBG("copy_to_user ctrlcmd failed!\n");
+		rc = -EFAULT;
+	}
+
+end:
+	CDBG("msm_control: end rc = %ld\n", rc);
+	return rc;
+}
+static long msm_af_control_done(void __user *arg,
+	struct msm_device *msm)
+{
+	unsigned long flags;
+	long rc = 0;
+	rc = copy_from_user(&msm->sync.af_status,
+		arg, sizeof(struct msm_ctrl_cmd));
+	spin_lock_irqsave(&msm->sync.af_status_lock, flags);
+	msm->sync.af_flag = (rc == 0 ? 1 : -1);
+	spin_unlock_irqrestore(&msm->sync.af_status_lock, flags);
+	wake_up(&msm->sync.af_status_wait);
+	return rc;
+}
 static long msm_ioctl(struct file *filep, unsigned int cmd,
 	unsigned long arg)
 {
@@ -1574,6 +1644,12 @@ static long msm_ioctl(struct file *filep, unsigned int cmd,
 
 	case MSM_CAM_IOCTL_SENSOR_IO_CFG:
 		return pmsm->sctrl.s_config(argp);
+
+	case MSM_CAM_IOCTL_AF_CTRL:
+		return msm_af_control(argp, pmsm);
+
+	case MSM_CAM_IOCTL_AF_CTRL_DONE:
+		return msm_af_control_done(argp, pmsm);
 
 	default:
 		break;
@@ -2039,6 +2115,9 @@ static long msm_setup_cdevs(struct msm_device *msm,
 	spin_lock_init(&msm->sync.ctrl_status_lock);
 	INIT_LIST_HEAD(&msm->sync.ctrl_status_queue);
 	init_waitqueue_head(&msm->sync.ctrl_status_wait);
+	spin_lock_init(&msm->sync.af_status_lock);
+	msm->sync.af_flag = 0;
+	init_waitqueue_head(&msm->sync.af_status_wait);
 
 	spin_lock_init(&(msm->sync.get_pp_q_lock));
 	INIT_LIST_HEAD(&(msm->sync.get_pp_q));

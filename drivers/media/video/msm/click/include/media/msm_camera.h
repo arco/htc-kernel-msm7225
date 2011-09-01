@@ -98,6 +98,11 @@
 #define MSM_CAM_IOCTL_FLASH_LED_CFG \
 	_IOW(MSM_CAM_IOCTL_MAGIC, 22, enum msm_camera_led_state *)
 
+#define MSM_CAM_IOCTL_AF_CTRL \
+	_IOR(MSM_CAM_IOCTL_MAGIC, 23, struct msm_ctrl_cmt *)
+#define MSM_CAM_IOCTL_AF_CTRL_DONE \
+	_IOW(MSM_CAM_IOCTL_MAGIC, 24, struct msm_ctrl_cmt *)
+
 #define MAX_SENSOR_NUM  3
 #define MAX_SENSOR_NAME 32
 
