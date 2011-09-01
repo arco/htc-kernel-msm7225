@@ -25,7 +25,7 @@
 
 static struct class *leds_class;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#if defined(CONFIG_HAS_EARLYSUSPEND) && defined(CONFIG_MACH_BUZZ)
 
 static void change_brightness(struct work_struct *brightness_change_data)
 {
