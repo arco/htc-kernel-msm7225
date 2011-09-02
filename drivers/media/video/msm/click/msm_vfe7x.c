@@ -12,7 +12,7 @@
 #include <linux/wait.h>
 #include "msm_vfe7x.h"
 
-#define QDSP_CMDQUEUE 25
+#define QDSP_CMDQUEUE QDSP_vfeCommandQueue
 
 #define VFE_RESET_CMD 0
 #define VFE_START_CMD 1
