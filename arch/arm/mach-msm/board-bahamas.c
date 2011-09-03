@@ -711,6 +711,7 @@ static struct h2w_platform_data bahamas_h2w_data = {
 	.h2w_data		= BAHAMAS_GPIO_H2W_DATA,
 	.headset_mic_35mm	= BAHAMAS_GPIO_HEADSET_MIC,
 	.ext_mic_sel		= BAHAMAS_GPIO_AUD_EXTMIC_SEL,
+	.wfm_ant_sw		= BAHAMAS_GPIO_WFM_ANT_SW,
 	.debug_uart 		= H2W_UART3,
 	.config 		= h2w_configure,
 	.defconfig 		= h2w_defconfig,
@@ -952,6 +953,63 @@ static struct msm_serial_hs_platform_data msm_uart_dm1_pdata = {
 };
 #endif
 
+static struct vreg *vreg_h2w;
+static int h2w_power_configure(struct gpio_chip *chip,
+			       unsigned int gpio,
+			       unsigned long flags)
+{
+	if ((flags & GPIOF_DRIVE_OUTPUT) && !vreg_h2w)
+		vreg_h2w = vreg_get(0, BAHAMAS_H2W_POWER_NAME);
+
+	if ((flags & GPIOF_OUTPUT_HIGH) && vreg_h2w) {
+		vreg_enable(vreg_h2w);
+		vreg_set_level(vreg_h2w, 3000);
+	} else if ((flags & GPIOF_OUTPUT_LOW) && vreg_h2w)
+		vreg_disable(vreg_h2w);
+
+	return 0;
+}
+
+static int h2w_power_get_irq_num(struct gpio_chip *chip,
+				 unsigned int gpio,
+				 unsigned int *irqp,
+				 unsigned long *irqnumflagsp)
+{
+	return -1;
+}
+
+static int h2w_power_read(struct gpio_chip *chip, unsigned n)
+{
+	return -1;
+}
+
+static int h2w_power_write(struct gpio_chip *chip, unsigned n, unsigned on)
+{
+	if (!vreg_h2w)
+		return -1;
+
+	if (on) {
+		vreg_enable(vreg_h2w);
+		vreg_set_level(vreg_h2w, 3000);
+	} else
+		vreg_disable(vreg_h2w);
+	return 0;
+}
+
+static struct gpio_chip bahamas_h2w_gpio_chip = {
+	.start = BAHAMAS_GPIO_H2W_POWER,
+	.end = BAHAMAS_GPIO_H2W_POWER,
+	.configure = h2w_power_configure,
+	.get_irq_num = h2w_power_get_irq_num,
+	.read = h2w_power_read,
+	.write = h2w_power_write,
+};
+
+void bahamas_init_h2w_power_gpio(void)
+{
+	register_gpio_chip(&bahamas_h2w_gpio_chip);
+}
+
 static void __init bahamas_init(void)
 {
 	int rc;
@@ -969,6 +1027,7 @@ static void __init bahamas_init(void)
 
 	gpio_request(BAHAMAS_GPIO_CABLE_IN2, "gpio_cable_in2");
 	gpio_request(BAHAMAS_GPIO_AUD_EXTMIC_SEL, "gpio_aud_extmic_sel");
+	gpio_request(BAHAMAS_GPIO_WFM_ANT_SW, "gpio_wfm_ant_sw");
 
 	msm_hw_reset_hook = bahamas_reset;
 
@@ -1017,6 +1076,8 @@ static void __init bahamas_init(void)
 	else
 		msm_add_mem_devices(&pmem_setting_dualdie);
 
+	bahamas_init_h2w_power_gpio();
+
 	rc = bahamas_init_mmc(system_rev);
 	if (rc)
 		printk(KERN_CRIT "%s: MMC init failure (%d)\n", __func__, rc);
@@ -1039,7 +1100,7 @@ static void __init bahamas_init(void)
 	platform_add_devices(devices, ARRAY_SIZE(devices));
 
 	if (system_rev >= 3)
-		bahamas_h2w_data.flags |= _35MM_MIC_DET_L2H | HTC_11PIN_HEADSET_SUPPORT | HTC_H2W_SUPPORT;
+		bahamas_h2w_data.flags |= _35MM_MIC_DET_L2H;
 
 	i2c_register_board_info(0, i2c_devices, ARRAY_SIZE(i2c_devices));
 	i2c_register_board_info(0 ,&i2c_microp_devices, 1);
