@@ -86,6 +86,9 @@
 #include <mach/msm_hsusb.h>
 #include <mach/htc_usb.h>
 
+void msm_init_irq(void);
+void msm_init_gpio(void);
+
 static int bahamas_phy_init_seq[] = {0x2C, 0x31, 0x20, 0x32, 0x1, 0x0D, 0x1, 0x10, -1};
 
 #define HSUSB_API_INIT_PHY_PROC 2
@@ -424,8 +427,6 @@ static struct i2c_board_info i2c_devices[] = {
 static struct msm_hsusb_platform_data msm_hsusb_pdata = {
 	.phy_init_seq = bahamas_phy_init_seq,
 	.phy_reset = bahamas_phy_reset,
-	.usb_id_pin_gpio = BAHAMAS_GPIO_USB_ID_PIN,
-	.accessory_detect = 1, /* detect by ID pin gpio */
 };
 
 static struct usb_mass_storage_platform_data mass_storage_pdata = {
@@ -786,16 +787,14 @@ static struct platform_device bahamas_rfkill = {
 };
 
 static struct platform_device *devices[] __initdata = {
-	&msm_device_smd,
-	&msm_device_nand,
 	&msm_device_i2c,
+	&bahamas_h2w,
 	&htc_battery_pdev,
 	&tssc_ts_device,
 #ifdef CONFIG_MT9T013_CLICK
 	&msm_camera_device,
 #endif
 	&bahamas_rfkill,
-	&bahamas_h2w,
 	&bahamas_audio_jack,
 #ifdef CONFIG_HTC_PWRSINK
 	&bahamas_pwr_sink,
@@ -1043,6 +1042,8 @@ static void __init bahamas_init(void)
 				MSM_GPIO_TO_INT(BAHAMAS_GPIO_UART3_RX));
 #endif
 
+	msm_add_devices();
+
 #ifdef CONFIG_SERIAL_MSM_HS
 	msm_device_uart_dm1.dev.platform_data = &msm_uart_dm1_pdata;
 	msm_device_uart_dm1.name = "msm_serial_hs_ti";	/* for ti */
@@ -1054,7 +1055,6 @@ static void __init bahamas_init(void)
 	msm_add_serial_devices(2);
 #ifdef CONFIG_USB_FUNCTION
 	msm_register_usb_phy_init_seq(bahamas_phy_init_seq);
-	msm_add_usb_id_pin_gpio(BAHAMAS_GPIO_USB_ID_PIN);
 	msm_add_usb_devices(bahamas_phy_reset, NULL);
 #endif
 
