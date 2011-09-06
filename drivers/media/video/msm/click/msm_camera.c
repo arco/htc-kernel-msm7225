@@ -301,8 +301,11 @@ static long msm_get_frame(void __user *arg,
 	if (rc < 0)
 		return rc;
 	if (msm->croplen) {
-		if (frame.croplen > msm->croplen) {
-		  CDBG("msm_get_frame failed! %d\n", __LINE__);
+		if (frame.croplen != msm->croplen) {
+		  CDBG("msm_get_frame: invalid frame croplen %d,"
+                               "expecting %d\n",
+                               frame.croplen,
+                               msm->croplen);
 			return -EINVAL;
 		}
 
@@ -1370,7 +1373,7 @@ static long msm_get_pic(void __user *arg,
 	CDBG("msm_camera->croplen:%d\n",msm->croplen);
 	CDBG("msm_camera->cropinfo:0x%p\n",msm->cropinfo);
 	if (msm->croplen) {
-	if (ctrlcmd_t.length < msm->croplen){
+	if (ctrlcmd_t.length != msm->croplen) {
 			CDBG_ERR("msm_get_pic:crop info wrong \n");
 			CDBG_ERR("msm_get_pic:length:%d \n",ctrlcmd_t.length);
 			CDBG_ERR("msm_get_pic:msm_camera->croplen:%d \n",
