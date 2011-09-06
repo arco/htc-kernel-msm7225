@@ -194,7 +194,7 @@ static long msm_pmem_table_del_proc(struct msm_pmem_info *pinfo,
 	switch (pinfo->type) {
 	case MSM_PMEM_OUTPUT1:
 	case MSM_PMEM_OUTPUT2:
-	case MSM_PMEM_THUMBAIL:
+	case MSM_PMEM_THUMBNAIL:
 	case MSM_PMEM_MAINIMG:
 	case MSM_PMEM_RAW_MAINIMG:
 		hlist_for_each_entry_safe(region, node, n,
@@ -997,7 +997,7 @@ static long msm_frame_axi_cfg(struct msm_vfe_cfg_cmd *cfgcmd_t,
 		break;
 
 	case CMD_AXI_CFG_SNAP_O1_AND_O2:
-		mtype = MSM_PMEM_THUMBAIL;
+		mtype = MSM_PMEM_THUMBNAIL;
 		axi_data.bufnum1 =
 			msm_pmem_region_lookup(&msm->sync.frame, mtype,
 				&region[0], 8);
@@ -1126,7 +1126,7 @@ static long msm_register_pmem_proc(struct msm_pmem_info *pinfo,
 	switch (pinfo->type) {
 	case MSM_PMEM_OUTPUT1:
 	case MSM_PMEM_OUTPUT2:
-	case MSM_PMEM_THUMBAIL:
+	case MSM_PMEM_THUMBNAIL:
 	case MSM_PMEM_MAINIMG:
 	case MSM_PMEM_RAW_MAINIMG:
 		rc = msm_pmem_table_add(&msm->sync.frame,
