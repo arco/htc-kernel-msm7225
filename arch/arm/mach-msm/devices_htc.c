@@ -61,7 +61,11 @@ void __init msm_add_devices(void)
 
 static struct android_pmem_platform_data pmem_pdata = {
 	.name = "pmem",
+#if defined(CONFIG_ARCH_MSM7225)
+	.no_allocator = PMEM_ALLOCATORTYPE_BUDDYBESTFIT,
+#else
 	.no_allocator = PMEM_ALLOCATORTYPE_ALLORNOTHING,
+#endif
 	.cached = 1,
 };
 
@@ -77,7 +81,11 @@ static struct android_pmem_platform_data pmem_adsp_pdata = {
 
 static struct android_pmem_platform_data pmem_camera_pdata = {
 	.name = "pmem_camera",
+#if defined(CONFIG_ARCH_MSM7225)
+	.no_allocator = PMEM_ALLOCATORTYPE_BUDDYBESTFIT,
+#else
 	.no_allocator = PMEM_ALLOCATORTYPE_BITMAP,
+#endif
 	.cached = 0,
 };
 
