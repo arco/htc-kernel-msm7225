@@ -89,7 +89,7 @@
 void msm_init_irq(void);
 void msm_init_gpio(void);
 
-static int bahamas_phy_init_seq[] = {0x2C, 0x31, 0x20, 0x32, 0x1, 0x0D, 0x1, 0x10, -1};
+static int bahamas_phy_init_seq[] = {0x40, 0x31, 0x1D, 0x0D, 0x1D, 0x10, -1};
 
 #define HSUSB_API_INIT_PHY_PROC 2
 #define HSUSB_API_PROG		0x30000064
