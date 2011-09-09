@@ -21,16 +21,14 @@
 #include <linux/i2c-msm.h>
 #include <linux/irq.h>
 #include <linux/leds.h>
-#include <linux/switch.h>
 #include <linux/akm8973.h>
 #include <linux/bma150.h>
 #include <linux/sysdev.h>
 #include <linux/android_pmem.h>
-#include <linux/keyreset.h>
 
 #include <mach/board.h>
 
-#ifdef CONFIG_MT9T013_CLICK
+#if defined(CONFIG_MT9T013_CLICK)
 #include "../../../../drivers/media/video/msm/click/include/mach/camera.h"
 #else
 #include <mach/camera.h>
@@ -76,7 +74,7 @@
 #include <mach/msm_tssc.h>
 #include <mach/htc_pwrsink.h>
 
-#ifdef CONFIG_PERFLOCK
+#if defined(CONFIG_PERFLOCK)
 #include <mach/perflock.h>
 #endif
 
@@ -85,9 +83,6 @@
 #include <mach/msm_iomap.h>
 #include <mach/msm_hsusb.h>
 #include <mach/htc_usb.h>
-
-void msm_init_irq(void);
-void msm_init_gpio(void);
 
 static int bahamas_phy_init_seq[] = {0x40, 0x31, 0x1D, 0x0D, 0x1D, 0x10, -1};
 
@@ -217,11 +212,6 @@ static struct microp_pin_config microp_pins_0_wint[] = {
 
 // XD after, Samsung panel
 static struct microp_pin_config microp_pins_1[] = {
-	{	.name	= "microp-pullup",
-		.pin	= 23,
-		.config	= MICROP_PIN_CONFIG_PULL_UP1,
-		.mask	= { 0x00, 0x00, 0x02 },
-	},
 	MICROP_PIN(0, MICROP_PIN_CONFIG_GPO),
 	MICROP_PIN(1, MICROP_PIN_CONFIG_GPO),
 	MICROP_PIN(2, MICROP_PIN_CONFIG_GPO),
@@ -234,6 +224,11 @@ static struct microp_pin_config microp_pins_1[] = {
 	MICROP_PIN(13, MICROP_PIN_CONFIG_GPO),
 	MICROP_PIN(14, MICROP_PIN_CONFIG_GPO),
 	MICROP_PIN(15, MICROP_PIN_CONFIG_GPO),
+	{	.name	= "microp-pullup",
+		.pin	= 23,
+		.config	= MICROP_PIN_CONFIG_PULL_UP1,
+		.mask	= { 0x00, 0x00, 0x02 },
+	},
 	{
 		.name	= "green",
 		.pin	= 3,
@@ -279,11 +274,6 @@ static struct microp_pin_config microp_pins_1[] = {
 
 // XD after, Wintek panel
 static struct microp_pin_config microp_pins_1_wint[] = {
-	{	.name	= "microp-pullup",
-		.pin	= 23,
-		.config	= MICROP_PIN_CONFIG_PULL_UP1,
-		.mask	= { 0x00, 0x00, 0x02 },
-	},
 	MICROP_PIN(0, MICROP_PIN_CONFIG_GPO),
 	MICROP_PIN(1, MICROP_PIN_CONFIG_GPO),
 	MICROP_PIN(2, MICROP_PIN_CONFIG_GPO),
@@ -296,6 +286,11 @@ static struct microp_pin_config microp_pins_1_wint[] = {
 	MICROP_PIN(13, MICROP_PIN_CONFIG_GPO),
 	MICROP_PIN(14, MICROP_PIN_CONFIG_GPO),
 	MICROP_PIN(15, MICROP_PIN_CONFIG_GPO),
+	{	.name	= "microp-pullup",
+		.pin	= 23,
+		.config	= MICROP_PIN_CONFIG_PULL_UP1,
+		.mask	= { 0x00, 0x00, 0x02 },
+	},
 	{
 		.name	= "green",
 		.pin	= 3,
@@ -353,7 +348,7 @@ static struct platform_device htc_battery_pdev = {
 	},
 };
 
-#ifdef CONFIG_MT9T013_CLICK
+#if defined(CONFIG_MT9T013_CLICK)
 static struct msm_camera_sensor_info msm_camera_sensor_mt9t013 = {
 	.sensor_reset	= 118,
 	.sensor_pwd	= BAHAMAS_MT9T013_CAM_PWDN,
@@ -423,7 +418,7 @@ static struct i2c_board_info i2c_devices[] = {
 	},
 };
 
-#ifdef CONFIG_USB_ANDROID
+#if defined(CONFIG_USB_ANDROID)
 static struct msm_hsusb_platform_data msm_hsusb_pdata = {
 	.phy_init_seq = bahamas_phy_init_seq,
 	.phy_reset = bahamas_phy_reset,
@@ -444,7 +439,7 @@ static struct platform_device usb_mass_storage_device = {
 	},
 };
 
-#ifdef CONFIG_USB_ANDROID_RNDIS
+#if defined(CONFIG_USB_ANDROID_RNDIS)
 static struct usb_ether_platform_data rndis_pdata = {
 	/* ethaddr is filled by board_serialno_setup */
 	.vendorID	= 0x18d1,
@@ -672,7 +667,7 @@ static int get_h2w_clk(void)
 	return gpio_get_value(BAHAMAS_GPIO_H2W_CLK);
 }
 
-#ifdef CONFIG_HTC_HEADSET_V1
+#if defined(CONFIG_HTC_HEADSET_V1)
 static int set_h2w_path(const char *val, struct kernel_param *kp)
 {
 	int ret = -EINVAL;
@@ -791,12 +786,12 @@ static struct platform_device *devices[] __initdata = {
 	&bahamas_h2w,
 	&htc_battery_pdev,
 	&tssc_ts_device,
-#ifdef CONFIG_MT9T013_CLICK
+#if defined(CONFIG_MT9T013_CLICK)
 	&msm_camera_device,
 #endif
 	&bahamas_rfkill,
 	&bahamas_audio_jack,
-#ifdef CONFIG_HTC_PWRSINK
+#if defined(CONFIG_HTC_PWRSINK)
 	&bahamas_pwr_sink,
 #endif
 };
@@ -836,7 +831,7 @@ static void bahamas_reset(void)
 
 static uint32_t gpio_table[] = {
 	/* BLUETOOTH */
-	#ifdef CONFIG_SERIAL_MSM_HS
+	#if defined(CONFIG_SERIAL_MSM_HS)
 	PCOM_GPIO_CFG(43, 2, GPIO_OUTPUT, GPIO_PULL_UP, GPIO_8MA), /* RTS */
 	PCOM_GPIO_CFG(44, 2, GPIO_INPUT, GPIO_PULL_UP, GPIO_8MA), /* CTS */
 	PCOM_GPIO_CFG(45, 2, GPIO_OUTPUT, GPIO_PULL_UP, GPIO_8MA), /* RX */
@@ -930,7 +925,7 @@ static struct msm_acpu_clock_platform_data bahamas_clock_data = {
 #endif
 };
 
-#ifdef CONFIG_PERFLOCK
+#if defined(CONFIG_PERFLOCK)
 static unsigned bahamas_perf_acpu_table[] = {
 	245760000,
 	480000000,
@@ -1031,7 +1026,7 @@ static void __init bahamas_init(void)
 	msm_hw_reset_hook = bahamas_reset;
 
 	msm_acpu_clock_init(&bahamas_clock_data);
-#ifdef CONFIG_PERFLOCK
+#if defined(CONFIG_PERFLOCK)
 	perflock_init(&bahamas_perflock_data);
 #endif
 
@@ -1044,7 +1039,7 @@ static void __init bahamas_init(void)
 
 	msm_add_devices();
 
-#ifdef CONFIG_SERIAL_MSM_HS
+#if defined(CONFIG_SERIAL_MSM_HS)
 	msm_device_uart_dm1.dev.platform_data = &msm_uart_dm1_pdata;
 	msm_device_uart_dm1.name = "msm_serial_hs_ti";	/* for ti */
 	msm_add_serial_devices(3);
@@ -1053,19 +1048,19 @@ static void __init bahamas_init(void)
 #endif
 
 	msm_add_serial_devices(2);
-#ifdef CONFIG_USB_FUNCTION
+#if defined(CONFIG_USB_FUNCTION)
 	msm_register_usb_phy_init_seq(bahamas_phy_init_seq);
 	msm_add_usb_devices(bahamas_phy_reset, NULL);
 #endif
 
-#ifdef CONFIG_USB_ANDROID
+#if defined(CONFIG_USB_ANDROID)
 	android_usb_pdata.products[0].product_id =
 		android_usb_pdata.product_id;
 	android_usb_pdata.serial_number = board_serialno();
 	msm_hsusb_pdata.serial_number = board_serialno();
 	msm_device_hsusb.dev.platform_data = &msm_hsusb_pdata;
 	platform_device_register(&msm_device_hsusb);
-#ifdef CONFIG_USB_ANDROID_RNDIS
+#if defined(CONFIG_USB_ANDROID_RNDIS)
 	platform_device_register(&rndis_device);
 #endif
 	platform_device_register(&usb_mass_storage_device);
@@ -1138,7 +1133,7 @@ static void __init bahamas_map_io(void)
 }
 
 MACHINE_START(BAHAMAS, "bahamas")
-#ifdef CONFIG_MSM_DEBUG_UART
+#if defined(CONFIG_MSM_DEBUG_UART)
 	.phys_io	= MSM_DEBUG_UART_PHYS,
 	.io_pg_offst	= ((MSM_DEBUG_UART_BASE) >> 18) & 0xfffc,
 #endif
