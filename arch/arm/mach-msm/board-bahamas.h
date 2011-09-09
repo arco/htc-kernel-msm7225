@@ -96,8 +96,11 @@
 
 #define BAHAMAS_GPIO_VSYNC		(97)
 
+void msm_init_irq(void);
+void msm_init_gpio(void);
 void config_bahamas_camera_on_gpios(void);
 void config_bahamas_camera_off_gpios(void);
+
 unsigned int bahamas_get_hwid(void);
 unsigned int bahamas_get_skuid(void);
 unsigned bahamas_engineerid(void);
