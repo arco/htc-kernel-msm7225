@@ -40,6 +40,7 @@
 #include <linux/log2.h>
 #include <linux/crc16.h>
 #include <asm/uaccess.h>
+#include <linux/cleancache.h>
 
 #include "ext4.h"
 #include "ext4_jbd2.h"
@@ -1789,6 +1790,7 @@ static int ext4_setup_super(struct super_block *sb, struct ext4_super_block *es,
 			EXT4_INODES_PER_GROUP(sb),
 			sbi->s_mount_opt);
 
+    sb->cleancache_poolid = cleancache_init_fs(PAGE_SIZE);
 	return res;
 }
 
