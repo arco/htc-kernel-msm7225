@@ -564,7 +564,7 @@ static struct msm_mddi_platform_data eid_pdata = {
 };
 
 static struct msm_mdp_platform_data mdp_pdata = {
-        .color_format = MSM_MDP_OUT_IF_FMT_RGB666,
+        .color_format = MSM_MDP_OUT_IF_FMT_RGB565,
 };
 
 int __init bahamas_init_panel(void)
