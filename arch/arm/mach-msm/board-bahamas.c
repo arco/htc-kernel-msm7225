@@ -1041,7 +1041,6 @@ static void __init bahamas_init(void)
 
 #if defined(CONFIG_SERIAL_MSM_HS)
 	msm_device_uart_dm1.dev.platform_data = &msm_uart_dm1_pdata;
-	msm_device_uart_dm1.name = "msm_serial_hs_ti";	/* for ti */
 	msm_add_serial_devices(3);
 #else
 	msm_add_serial_devices(0);
