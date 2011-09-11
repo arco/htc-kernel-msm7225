@@ -28,7 +28,7 @@
 extern int bahamas_bt_fastclock_power(int on);
 
 static struct rfkill *bt_rfk;
-static const char bt_name[] = "brf6300";
+static const char bt_name[] = "brf6350";
 
 static int bahamas_bt_status;
 
@@ -140,7 +140,7 @@ static int bahamas_rfkill_probe(struct platform_device *pdev)
 	bt_rfk = rfkill_alloc(bt_name, &pdev->dev, RFKILL_TYPE_BLUETOOTH,
 			      &bahamas_rfkill_ops, NULL);
 	if (!bt_rfk){
-		printk(KERN_ERR "%s: Could not allocate memmory\n", __func__);
+		printk(KERN_ERR "%s: Could not allocate memory\n", __func__);
 		ret = -ENOMEM;
 		goto err_rfkill_alloc;
 	}

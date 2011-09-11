@@ -1,7 +1,6 @@
-/* linux/arch/arm/mach-msm7225/board-bahamas-mmc.c
+/* linux/arch/arm/mach-msm/board-bahamas-mmc.c
  *
- * Copyright (C) 2007-2009 HTC Corporation.
- * Author: Tony Liu <tony_liu@htc.com>
+ * Copyright (C) 2009 HTC Corporation.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -20,7 +19,6 @@
 #include <linux/mmc/host.h>
 #include <linux/mmc/sdio_ids.h>
 #include <linux/err.h>
-#include <linux/debugfs.h>
 
 #include <linux/gpio.h>
 #include <linux/io.h>
@@ -32,6 +30,7 @@
 #include <asm/mach/mmc.h>
 
 #include "devices.h"
+#include "gpio_chip.h"
 #include "board-bahamas.h"
 #include "proc_comm.h"
 
@@ -79,9 +78,17 @@ struct mmc_vdd_xlat {
 };
 
 static struct mmc_vdd_xlat mmc_vdd_table[] = {
-	{ MMC_VDD_27_28,	2800 },
+	{ MMC_VDD_165_195,	1800 },
+	{ MMC_VDD_20_21,	2050 },
+	{ MMC_VDD_21_22,	2150 },
+	{ MMC_VDD_22_23,	2250 },
+	{ MMC_VDD_23_24,	2350 },
+	{ MMC_VDD_24_25,	2450 },
+	{ MMC_VDD_25_26,	2550 },
+	{ MMC_VDD_26_27,	2650 },
+	{ MMC_VDD_27_28,	2750 },
 	{ MMC_VDD_28_29,	2850 },
-	{ MMC_VDD_29_30,	2900 },
+	{ MMC_VDD_29_30,	2950 },
 };
 
 static unsigned int sdslot_vdd = 0xffffffff;
@@ -98,7 +105,7 @@ static uint32_t bahamas_sdslot_switchvdd(struct device *dev, unsigned int vdd)
 
 	if (vdd == 0) {
 #if DEBUG_SDSLOT_VDD
-		printk(KERN_INFO "%s: Disabling SD slot power\n", __func__);
+		printk(KERN_DEBUG "%s: Disabling SD slot power\n", __func__);
 #endif
 		config_gpio_table(sdcard_off_gpio_table,
 				  ARRAY_SIZE(sdcard_off_gpio_table));
@@ -113,7 +120,7 @@ static uint32_t bahamas_sdslot_switchvdd(struct device *dev, unsigned int vdd)
 		udelay(500);
 		if (ret) {
 			printk(KERN_ERR "%s: Error enabling vreg (%d)\n",
-				__func__, ret);
+			       __func__, ret);
 		}
 		config_gpio_table(sdcard_on_gpio_table,
 				  ARRAY_SIZE(sdcard_on_gpio_table));
@@ -121,20 +128,20 @@ static uint32_t bahamas_sdslot_switchvdd(struct device *dev, unsigned int vdd)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(mmc_vdd_table); i++) {
-		if (mmc_vdd_table[i].mask == (1 << vdd)) {
+		if (mmc_vdd_table[i].mask != (1 << vdd))
+			continue;
 #if DEBUG_SDSLOT_VDD
-			printk(KERN_INFO "%s: Setting level to %u\n",
-					__func__, mmc_vdd_table[i].level);
+		printk(KERN_DEBUG "%s: Setting level to %u\n",
+			__func__, mmc_vdd_table[i].level);
 #endif
-			ret = vreg_set_level(vreg_sdslot,
-					    mmc_vdd_table[i].level);
+		ret = vreg_set_level(vreg_sdslot,
+				    mmc_vdd_table[i].level);
 		if (ret) {
 			printk(KERN_ERR
-				"%s: Error setting vreg level (%d)\n",
-				__func__, ret);
+			       "%s: Error setting vreg level (%d)\n",
+			       __func__, ret);
 		}
-			return 0;
-		}
+		return 0;
 	}
 
 	printk(KERN_ERR "%s: Invalid VDD %d specified\n", __func__, vdd);
@@ -146,23 +153,25 @@ static unsigned int bahamas_sdslot_status(struct device *dev)
 	unsigned int status;
 
 	status = (unsigned int) gpio_get_value(BAHAMAS_GPIO_SDMC_CD_N);
-	return (!status);
+	return !status;
 }
 
-#define BAHAMAS_MMC_VDD	MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30
+#define BAHAMAS_MMC_VDD	MMC_VDD_165_195 | MMC_VDD_20_21 | MMC_VDD_21_22 \
+			| MMC_VDD_22_23 | MMC_VDD_23_24 | MMC_VDD_24_25 \
+			| MMC_VDD_25_26 | MMC_VDD_26_27 | MMC_VDD_27_28 \
+			| MMC_VDD_28_29 | MMC_VDD_29_30
 
 static unsigned int bahamas_sdslot_type = MMC_TYPE_SD;
 
 static struct mmc_platform_data bahamas_sdslot_data = {
 	.ocr_mask	= BAHAMAS_MMC_VDD,
-	//.status_irq	= MSM_GPIO_TO_INT(BAHAMAS_GPIO_SDMC_CD_N),
+	.status_irq	= MSM_GPIO_TO_INT(BAHAMAS_GPIO_SDMC_CD_N),
 	.status		= bahamas_sdslot_status,
 	.translate_vdd	= bahamas_sdslot_switchvdd,
 	.slot_type	= &bahamas_sdslot_type,
 };
 
 /* ---- WIFI ---- */
-
 static uint32_t wifi_on_gpio_table[] = {
 	PCOM_GPIO_CFG(51, 1, GPIO_OUTPUT, GPIO_PULL_UP, GPIO_4MA), /* DAT3 */
 	PCOM_GPIO_CFG(52, 1, GPIO_OUTPUT, GPIO_PULL_UP, GPIO_4MA), /* DAT2 */
@@ -183,39 +192,38 @@ static uint32_t wifi_off_gpio_table[] = {
 	PCOM_GPIO_CFG(29, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_4MA), /* WLAN IRQ */
 };
 
-static struct vreg *vreg_wifi_osc;	/* WIFI 32khz oscilator */
-static struct vreg *vreg_wifi_batpa;	/* WIFI main power */
-static int bahamas_wifi_cd;		/* WIFI virtual 'card detect' status */
+static struct vreg *vreg_wifi_osc;    /* WIFI 32khz oscilator */
+static int bahamas_wifi_cd = 0;          /* WIFI virtual 'card detect' status */
+static struct vreg *vreg_wifi_batpa;  /* WIFI main power */
 
 static struct sdio_embedded_func wifi_func = {
-	.f_class	= SDIO_CLASS_WLAN,
-	.f_maxblksize	= 512,
+	.f_class      = SDIO_CLASS_WLAN,
+	.f_maxblksize = 512,
 };
 
 static struct embedded_sdio_data bahamas_wifi_emb_data = {
 	.cis	= {
-		.vendor		= 0x104c,
-		.device		= 0x9066,
-		.blksize	= 512,
-		.max_dtr	= 20000000,
+		.vendor      = 0x104c,
+		.device      = 0x9066,
+		.blksize     = 512,
+		.max_dtr     = 20000000,
 	},
 	.cccr	= {
-		.multi_block	= 0,
-		.low_speed	= 0,
-		.wide_bus	= 0,
-		.high_power	= 0,
-		.high_speed	= 0,
+		.multi_block = 0,
+		.low_speed   = 0,
+		.wide_bus    = 0,
+		.high_power  = 0,
+		.high_speed  = 0,
 	},
-	.funcs	= &wifi_func,
+	.funcs     = &wifi_func,
 	.num_funcs = 1,
 };
 
 static void (*wifi_status_cb)(int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
 
-static int
-bahamas_wifi_status_register(void (*callback)(int card_present, void *dev_id),
-				void *dev_id)
+static int bahamas_wifi_status_register(void (*callback)(int card_present,
+	void *dev_id), void *dev_id)
 {
 	if (wifi_status_cb)
 		return -EAGAIN;
@@ -230,15 +238,15 @@ static unsigned int bahamas_wifi_status(struct device *dev)
 }
 
 static struct mmc_platform_data bahamas_wifi_data = {
-	.ocr_mask		= MMC_VDD_20_21,
-	.status			= bahamas_wifi_status,
-	.register_status_notify	= bahamas_wifi_status_register,
-	.embedded_sdio		= &bahamas_wifi_emb_data,
+	.ocr_mask               = MMC_VDD_20_21,
+	.status                 = bahamas_wifi_status,
+	.register_status_notify = bahamas_wifi_status_register,
+	.embedded_sdio          = &bahamas_wifi_emb_data,
 };
 
 int bahamas_wifi_set_carddetect(int val)
 {
-	printk(KERN_INFO "%s: %d\n", __func__, val);
+	printk(KERN_DEBUG "%s: %d\n", __func__, val);
 	bahamas_wifi_cd = val;
 	if (wifi_status_cb)
 		wifi_status_cb(val, wifi_status_cb_devid);
@@ -254,7 +262,7 @@ int bahamas_wifi_power(int on)
 {
 	int ret;
 
-	printk("%s: %d\n", __func__, on);
+	printk(KERN_DEBUG "%s: %d\n", __func__, on);
 
 	if (on) {
 		config_gpio_table(wifi_on_gpio_table,
@@ -274,22 +282,21 @@ int bahamas_wifi_power(int on)
 		htc_pwrsink_set(PWRSINK_WIFI, 0);
 	}
 
-	gpio_set_value( BAHAMAS_GPIO_WIFI_EN, on);
+	gpio_set_value(BAHAMAS_GPIO_WIFI_EN, on);
 	mdelay(100);
 
 	if (!on) {
-		if (!bahamas_bt_power_state) {
+		if (!bahamas_bt_power_state)
+		{
 			vreg_disable(vreg_wifi_osc);
 			vreg_disable(vreg_wifi_batpa);
-		} else
-			printk("WiFi shouldn't disable vreg_wifi_osc. BT is using it!!\n");
+		}
+		else
+			printk(KERN_DEBUG "WiFi shouldn't disable vreg_wifi_osc. BT is using it!!\n");
 	}
 	bahamas_wifi_power_state = on;
 	return 0;
 }
-#ifndef CONFIG_WIFI_CONTROL_FUNC
-EXPORT_SYMBOL(bahamas_wifi_power);
-#endif
 
 /* Enable VREG_MMC pin to turn on fastclock oscillator : colin */
 int bahamas_bt_fastclock_power(int on)
@@ -300,17 +307,14 @@ int bahamas_bt_fastclock_power(int on)
 	if (vreg_wifi_osc) {
 		if (on) {
 			ret = vreg_enable(vreg_wifi_osc);
-
 			if (ret) {
-				printk(KERN_ERR "%s: error vreg_wifi_osc=%d\n",__func__, ret);
-
+				printk(KERN_ERR "%s: error vreg_wifi_osc=%d\n", __func__, ret);
 				return ret;
 			}
 		} else {
 			if (!bahamas_wifi_power_state) {
 				vreg_disable(vreg_wifi_osc);
 				printk(KERN_DEBUG "BT disable vreg_wifi_osc.\n");
-
 			} else
 				printk(KERN_DEBUG "BT shouldn't disable vreg_wifi_osc. WiFi is using it!!\n");
 		}
@@ -326,9 +330,6 @@ void bahamas_wifi_reset(int on)
 	printk(KERN_DEBUG "%s: %d\n", __func__, on);
 	bahamas_wifi_reset_state = on;
 }
-#ifndef CONFIG_WIFI_CONTROL_FUNC
-EXPORT_SYMBOL(bahamas_wifi_reset);
-#endif
 
 int __init bahamas_init_mmc(unsigned int sys_rev)
 {
@@ -356,12 +357,14 @@ int __init bahamas_init_mmc(unsigned int sys_rev)
 
 	msm_add_sdcc(1, &bahamas_wifi_data, 0, 0);
 
-	if (!opt_disable_sdcard)
-		msm_add_sdcc(2, &bahamas_sdslot_data,
-			MSM_GPIO_TO_INT(BAHAMAS_GPIO_SDMC_CD_N),
-			IORESOURCE_IRQ_LOWEDGE | IORESOURCE_IRQ_HIGHEDGE);
-	else
-		printk(KERN_INFO "bahamas: SD-Card interface disabled\n");
+	if (opt_disable_sdcard) {
+		printk(KERN_INFO "%s: SD-Card interface disabled\n", __func__);
+		goto done;
+	}
 
+	msm_add_sdcc(2, &bahamas_sdslot_data, MSM_GPIO_TO_INT(BAHAMAS_GPIO_SDMC_CD_N),
+		IORESOURCE_IRQ_LOWEDGE | IORESOURCE_IRQ_HIGHEDGE);
+
+done:
 	return 0;
 }
