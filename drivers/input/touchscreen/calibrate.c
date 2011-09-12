@@ -154,7 +154,7 @@ void calibration_show_parameters(int status)
 /*
  * Calculate calibration variables.
  */
-void calibration_calculate_varialbes(struct tssc_ts_platform_data *pdata)
+void calibration_calculate_variables(struct tssc_ts_platform_data *pdata)
 {
 	int xdir, xlen, ydir, ylen;
 	int x_length, y_length;
@@ -248,19 +248,19 @@ void calibration_calculate_varialbes(struct tssc_ts_platform_data *pdata)
 		printk(KERN_INFO "calibration_x[%d]=%d\t", i, calibration_x[i]);
 		printk(KERN_INFO "calibration_y[%d]=%d\n", i, calibration_y[i]);
 	}
-	printk(KERN_INFO "abs(calibration_x[0] - calibration_x[3])=%d\n", abs(calibration_x[0] - calibration_x[3]));
-	printk(KERN_INFO "abs(calibration_y[0] - calibration_y[1])=%d\n", abs(calibration_y[0] - calibration_y[1]));
-	printk(KERN_INFO "abs(calibration_x[1] - calibration_x[4])=%d\n", abs(calibration_x[1] - calibration_x[4]));
-	printk(KERN_INFO "abs(calibration_y[3] - calibration_y[4])=%d\n", abs(calibration_y[3] - calibration_y[4]));
-	printk(KERN_INFO "abs(calibration_x[2] - ((calibration_x[0] + calibration_x[1])/2))=%d\n", abs(calibration_x[2] - ((calibration_x[0] + calibration_x[1])/2)));
-	printk(KERN_INFO "abs(calibration_x[2] - ((calibration_x[3] + calibration_x[4])/2))=%d\n", abs(calibration_x[2] - ((calibration_x[3] + calibration_x[4])/2)));
-	printk(KERN_INFO "abs(calibration_y[2] - ((calibration_y[0] + calibration_y[3])/2))=%d\n", abs(calibration_y[2] - ((calibration_y[0] + calibration_y[3])/2)));
-	printk(KERN_INFO "abs(calibration_y[2] - ((calibration_y[1] + calibration_y[4])/2))=%d\n", abs(calibration_y[2] - ((calibration_y[1] + calibration_y[4])/2)));
+	printk(KERN_INFO "abs(calibration_x[0] - calibration_x[3])=%ld\n", abs(calibration_x[0] - calibration_x[3]));
+	printk(KERN_INFO "abs(calibration_y[0] - calibration_y[1])=%ld\n", abs(calibration_y[0] - calibration_y[1]));
+	printk(KERN_INFO "abs(calibration_x[1] - calibration_x[4])=%ld\n", abs(calibration_x[1] - calibration_x[4]));
+	printk(KERN_INFO "abs(calibration_y[3] - calibration_y[4])=%ld\n", abs(calibration_y[3] - calibration_y[4]));
+	printk(KERN_INFO "abs(calibration_x[2] - ((calibration_x[0] + calibration_x[1])/2))=%ld\n", abs(calibration_x[2] - ((calibration_x[0] + calibration_x[1])/2)));
+	printk(KERN_INFO "abs(calibration_x[2] - ((calibration_x[3] + calibration_x[4])/2))=%ld\n", abs(calibration_x[2] - ((calibration_x[3] + calibration_x[4])/2)));
+	printk(KERN_INFO "abs(calibration_y[2] - ((calibration_y[0] + calibration_y[3])/2))=%ld\n", abs(calibration_y[2] - ((calibration_y[0] + calibration_y[3])/2)));
+	printk(KERN_INFO "abs(calibration_y[2] - ((calibration_y[1] + calibration_y[4])/2))=%ld\n", abs(calibration_y[2] - ((calibration_y[1] + calibration_y[4])/2)));
 
-	printk(KERN_INFO "abs(calibration_x[0] - calibration_x[1]))=%d\n", abs(calibration_x[0] - calibration_x[1]));
-	printk(KERN_INFO "abs(calibration_x[3] - calibration_x[4]))=%d\n", abs(calibration_x[3] - calibration_x[4]));
-	printk(KERN_INFO "abs(calibration_y[0] - calibration_y[3])=%d\n", abs(calibration_y[0] - calibration_y[3]));
-	printk(KERN_INFO "abs(calibration_y[1] - calibration_y[4])=%d\n", abs(calibration_y[1] - calibration_y[4]));
+	printk(KERN_INFO "abs(calibration_x[0] - calibration_x[1]))=%ld\n", abs(calibration_x[0] - calibration_x[1]));
+	printk(KERN_INFO "abs(calibration_x[3] - calibration_x[4]))=%ld\n", abs(calibration_x[3] - calibration_x[4]));
+	printk(KERN_INFO "abs(calibration_y[0] - calibration_y[3])=%ld\n", abs(calibration_y[0] - calibration_y[3]));
+	printk(KERN_INFO "abs(calibration_y[1] - calibration_y[4])=%ld\n", abs(calibration_y[1] - calibration_y[4]));
 
 	if (abs(calibration_x[0] - calibration_x[3]) < pdata->cal_err
 	&& abs(calibration_y[0] - calibration_y[1]) < pdata->cal_err
@@ -280,7 +280,7 @@ void calibration_calculate_varialbes(struct tssc_ts_platform_data *pdata)
 	} else {
 		result = 1;
 	}
-	printk(KERN_INFO "calibration_calculate_varialbes(): result=%d\n", result);
+	printk(KERN_INFO "calibration_calculate_variables(): result=%d\n", result);
 
 	calibration_show_parameters(result);
 
@@ -366,7 +366,7 @@ void calibration_store(const char *buf, struct tssc_ts_platform_data *pdata)
 
 	if (val == 0) { /* exit calibration mode */
 		calibration_flag = 0;
-		calibration_calculate_varialbes(pdata);
+		calibration_calculate_variables(pdata);
 		calibration_index = 0;
 		printk(KERN_DEBUG "touch_calibration: exit.\n");
 	} else { /* calibration mode */
@@ -417,7 +417,7 @@ void calibration_points_store(const char *buf, struct tssc_ts_platform_data *pda
 	if (cnt >= CALIBRATION_COORDINATES) {
 		calibration_set(&tmp[0]);
 		calibration_index = CALIBRATION_POINTS;
-		calibration_calculate_varialbes(pdata);
+		calibration_calculate_variables(pdata);
 		calibration_index = 0;
 	}
 }
