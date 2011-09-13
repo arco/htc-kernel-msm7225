@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.14
-# Sun Sep 11 07:21:57 2011
+# Tue Sep 13 06:30:25 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1067,7 +1067,7 @@ CONFIG_MSM_RMNET=y
 # CONFIG_MSM_RMNET_DEBUG is not set
 # CONFIG_NETPOLL is not set
 # CONFIG_NET_POLL_CONTROLLER is not set
-CONFIG_GAN_ETH=y
+# CONFIG_GAN_ETH is not set
 # CONFIG_ISDN is not set
 # CONFIG_PHONE is not set
 
@@ -2024,7 +2024,8 @@ CONFIG_CRYPTO_DES=y
 # CONFIG_CRYPTO_SEED is not set
 # CONFIG_CRYPTO_SERPENT is not set
 # CONFIG_CRYPTO_TEA is not set
-# CONFIG_CRYPTO_TWOFISH is not set
+CONFIG_CRYPTO_TWOFISH=y
+CONFIG_CRYPTO_TWOFISH_COMMON=y
 
 #
 # Compression
