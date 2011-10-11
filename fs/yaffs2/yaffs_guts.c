@@ -2669,9 +2669,6 @@ static int yaffs_BlockNotDisqualifiedFromGC(yaffs_Device *dev,
 	if (!dev->isYaffs2)
 		return 1;	/* disqualification only applies to yaffs2. */
 
-	if (!bi->hasShrinkHeader)
-		return 1;	/* can gc */
-
 	yaffs_FindOldestDirtySequence(dev);
 
 	/* Can't do gc of this block if there are any blocks older than this one that have
@@ -2776,7 +2773,7 @@ static int yaffs_FindBlockForGarbageCollection(yaffs_Device *dev,
 	}
 
 	if (dirtiest > 0)
-		dev->nonAggressiveSkip = 4;
+		dev->nonAggressiveSkip = 2;
 
 	return dirtiest;
 }
@@ -6394,14 +6391,6 @@ static int yaffs_ScanBackwards(yaffs_Device *dev)
 				  blk, c));
 
 				  dev->nFreeChunks++;
-			} else if (tags.objectId > YAFFS_MAX_OBJECT_ID ||
-				  tags.chunkId > YAFFS_MAX_CHUNK_ID ||
-				  (tags.chunkId > 0 && tags.byteCount > dev->nDataBytesPerChunk) ||
-				  tags.sequenceNumber != bi->sequenceNumber ) {
-				  T(YAFFS_TRACE_SCAN,
-					(TSTR("Chunk (%d:%d) with bad tags:obj = %d, chunkId = %d, byteCount = %d, ignored"TENDSTR),
-					blk, c,tags.objectId, tags.chunkId, tags.byteCount));
-					dev->nFreeChunks++;
 
 			} else if (tags.chunkId > 0) {
 				/* chunkId > 0 so it is a data chunk... */

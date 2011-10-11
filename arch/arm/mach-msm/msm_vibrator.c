@@ -67,7 +67,7 @@ static void set_pmic_vibrator(int on)
 		sizeof(req), 5 * HZ);
 
 	if (rc < 0)
-		VIB_ERR_LOG("msm_rpc_call failed!\n");
+		VIB_ERR_LOG("msm_rpc_call failed (%d)!\n", rc);
 	else if (on)
 		pr_info("[ATS][set_vibration][successful]\n");
 }

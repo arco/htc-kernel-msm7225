@@ -84,7 +84,6 @@ struct mdp_device *mdp;
 #ifdef CONFIG_FB_MSM_OVERLAY
 static atomic_t mdpclk_on = ATOMIC_INIT(1);
 #endif
-DECLARE_MUTEX(ov_semaphore);
 
 struct msmfb_info {
 	struct fb_info *fb;
@@ -183,7 +182,6 @@ static void msmfb_handle_dma_interrupt(struct msmfb_callback *callback)
 	static int64_t frame_count;
 	static ktime_t last_sec;
 #endif
-	up(&ov_semaphore);
 
 	spin_lock_irqsave(&msmfb->update_lock, irq_flags);
 	msmfb->frame_done = msmfb->frame_requested;
@@ -228,13 +226,11 @@ static int msmfb_start_dma(struct msmfb_info *msmfb)
 	}
 	if (msmfb->frame_done == msmfb->frame_requested) {
 		spin_unlock_irqrestore(&msmfb->update_lock, irq_flags);
-		up(&ov_semaphore);
 		return -1;
 	}
 	if (msmfb->sleeping == SLEEPING) {
 		DLOG(SUSPEND_RESUME, "tried to start dma while asleep\n");
 		spin_unlock_irqrestore(&msmfb->update_lock, irq_flags);
-		up(&ov_semaphore);
 		return -1;
 	}
 	x = msmfb->update_info.left;
@@ -270,7 +266,6 @@ error:
 	/* some clients need to clear their vsync interrupt */
 	if (panel->clear_vsync)
 		panel->clear_vsync(panel);
-	up(&ov_semaphore);
 	wake_up(&msmfb->frame_wq);
 	return 0;
 }
@@ -432,7 +427,6 @@ restart:
 
 	/* if the panel is all the way on wait for vsync, otherwise sleep
 	 * for 16 ms (long enough for the dma to panel) and then begin dma */
-	down(&ov_semaphore);
 	msmfb->vsync_request_time = ktime_get();
 	if (panel->request_vsync && (sleeping == AWAKE)) {
 		wake_lock_timeout(&msmfb->idle_lock, HZ/4);
@@ -1003,7 +997,12 @@ static int msmfb_ioctl(struct fb_info *p, unsigned int cmd, unsigned long arg)
 		break;
 #ifdef CONFIG_FB_MSM_OVERLAY
 	case MSMFB_OVERLAY_GET:
-		ret = msmfb_overlay_get(p, argp);
+		if(!atomic_read(&mdpclk_on)) {
+			PR_DISP_WARN("MSMFB_OVERLAY_GET during suspend\n");
+			ret = -EINVAL;
+		} else
+			ret = msmfb_overlay_get(p, argp);
+		PR_DISP_INFO("MSMFB_OVERLAY_GET ret=%d\n", ret);
 		break;
 	case MSMFB_OVERLAY_SET:
 		if(!atomic_read(&mdpclk_on)) {
@@ -1257,7 +1256,6 @@ static int msmfb_probe(struct platform_device *pdev)
 	msmfb->xres = panel->fb_data->xres;
 	msmfb->yres = panel->fb_data->yres;
 	msmfb->overrides = panel->fb_data->overrides;
-	setup_fb_info(msmfb);
 	ret = setup_fbmem(msmfb, pdev);
 	if (ret)
 		goto error_setup_fbmem;
@@ -1266,6 +1264,8 @@ static int msmfb_probe(struct platform_device *pdev)
 	/* Jay, 8/1/09' */
 	msmfb_set_var(msmfb->fb->screen_base, 0);
 #endif
+
+	setup_fb_info(msmfb);
 
 	spin_lock_init(&msmfb->update_lock);
 	mutex_init(&msmfb->panel_init_lock);
@@ -1325,6 +1325,12 @@ static int msmfb_probe(struct platform_device *pdev)
 	msmfb->fake_vsync.function = msmfb_fake_vsync;
 
 	ret = register_framebuffer(fb);
+
+	if(fb->node == 0)
+		mdp->fb0 = msmfb->fb;
+	else
+		mdp->fb1 = msmfb->fb;
+
 	if (ret)
 		goto error_register_framebuffer;
 

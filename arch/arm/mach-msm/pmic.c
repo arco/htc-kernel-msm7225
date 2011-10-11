@@ -205,6 +205,8 @@ static int pmic_rpc(int proc, void *msg, int msglen, void *rep, int replen)
 		}
 		r -= sizeof(struct rpc_reply_hdr);
 	}
+	else
+		pr_err("%s: msm_rpc_call_reply fail (%d)\n", __func__, r);
 done:
 	mutex_unlock(&pmic_mutex);
 	return r;

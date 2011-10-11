@@ -334,13 +334,6 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 }
 EXPORT_SYMBOL(clk_set_rate);
 
-long clk_round_rate(struct clk *clk, unsigned long rate)
-{
-	//return clk->ops->round_rate(clk->id, rate);
-	return rate;
-}
-EXPORT_SYMBOL(clk_round_rate);
-
 int clk_set_min_rate(struct clk *clk, unsigned long rate)
 {
 	return clk->ops->set_min_rate(clk->id, rate);
@@ -473,7 +466,6 @@ struct clk_ops clk_ops_pcom = {
 	.disable = pc_clk_disable,
 	.reset = pc_clk_reset,
 	.set_rate = pc_clk_set_rate,
-	//.round_rate = pc_clk_round_rate,
 	.set_min_rate = pc_clk_set_min_rate,
 	.set_max_rate = pc_clk_set_max_rate,
 	.set_flags = pc_clk_set_flags,

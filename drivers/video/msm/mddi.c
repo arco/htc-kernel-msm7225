@@ -403,7 +403,11 @@ void mddi_set_auto_hibernate(struct msm_mddi_client_data *cdata, int on)
 
 static uint16_t mddi_init_registers(struct mddi_info *mddi)
 {
+#ifdef CONFIG_MACH_MARVEL
 	mddi_writel(0x0000, VERSION);
+#else
+	mddi_writel(0x0001, VERSION);
+#endif
 
 	mddi_writel(MDDI_HOST_BYTES_PER_SUBFRAME, BPS);
 	mddi_writel(0x0003, SPM); /* subframes per media */
@@ -945,7 +949,7 @@ int mddi_reg_debugfs_init(struct mddi_info *mddi)
         if (IS_ERR(mddi_reg_dent))
                 return PTR_ERR(mddi_reg_dent);
 
-        debugfs_create_file("reg", 0600, mddi_reg_dent, mddi,
+        debugfs_create_file("reg", 0666, mddi_reg_dent, mddi,
                 &mddi_reg_debugfs_fops[0]);
 
         return 0;
