@@ -251,11 +251,7 @@ static int msmfb_start_dma(struct msmfb_info *msmfb)
 	}
 	spin_unlock_irqrestore(&msmfb->update_lock, irq_flags);
 
-#if defined(CONFIG_MACH_BAHAMAS) || defined(CONFIG_MACH_BUZZ)
-	addr = ((msmfb->xres * (yoffset + y) + x) * BYTES_PER_PIXEL(msmfb));
-#else
 	addr = (( ALIGN(msmfb->xres, 32) * (yoffset + y) + x) * BYTES_PER_PIXEL(msmfb));
-#endif
 	mdp->dma(mdp, addr + msmfb->fb->fix.smem_start,
 		 msmfb->xres * BYTES_PER_PIXEL(msmfb), w, h, x, y,
 		 &msmfb->dma_callback,
@@ -666,11 +662,7 @@ static int msmfb_set_par(struct fb_info *info)
 	} else
 		return -1;
 	mdp->set_output_format(mdp, var->bits_per_pixel);
-#if defined(CONFIG_MACH_BAHAMAS) || defined(CONFIG_MACH_BUZZ)
-	fix->line_length = var->xres * var->bits_per_pixel / 8;
-#else
 	fix->line_length = ALIGN(var->xres, 32) * var->bits_per_pixel / 8;
-#endif
 	return 0;
 }
 
@@ -1134,11 +1126,7 @@ static void setup_fb_info(struct msmfb_info *msmfb)
 
 	fb_info->fix.type = FB_TYPE_PACKED_PIXELS;
 	fb_info->fix.visual = FB_VISUAL_TRUECOLOR;
-#if defined(CONFIG_MACH_BAHAMAS) || defined(CONFIG_MACH_BUZZ)
-	fb_info->fix.line_length = msmfb->xres * 2;
-#else
 	fb_info->fix.line_length = ALIGN(msmfb->xres, 32) * BITS_PER_PIXEL_DEF / 8;
-#endif
 
 	fb_info->var.xres = msmfb->xres;
 	fb_info->var.yres = msmfb->yres;
