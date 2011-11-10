@@ -21,6 +21,7 @@
 #include <linux/gpio.h>
 #include <linux/input.h>
 #include <linux/platform_device.h>
+#include <linux/pl_sensor.h>
 #include <linux/capella_cm3602.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
@@ -33,9 +34,13 @@
 
 struct wake_lock proximity_wake_lock;
 
+static void sensor_irq_do_work(struct work_struct *work);
+static DECLARE_WORK(sensor_irq_work, sensor_irq_do_work);
+
 static struct capella_cm3602_data {
 	struct input_dev *input_dev;
 	struct capella_cm3602_platform_data *pdata;
+	struct workqueue_struct *lp_wq;
 	int enabled;
 } the_data;
 
@@ -66,15 +71,25 @@ static int capella_cm3602_report(struct capella_cm3602_data *data)
 	input_report_abs(data->input_dev, ABS_DISTANCE, val);
 	input_sync(data->input_dev);
 
+	blocking_notifier_call_chain(&psensor_notifier_list, val+2, NULL);
+
 	wake_lock_timeout(&proximity_wake_lock, 2*HZ);
 
 	return val;
 }
 
+static void sensor_irq_do_work(struct work_struct *work)
+{
+	capella_cm3602_report(&the_data);
+	enable_irq(the_data.pdata->irq);
+}
+
 static irqreturn_t capella_cm3602_irq_handler(int irq, void *data)
 {
 	struct capella_cm3602_data *ip = data;
-	capella_cm3602_report(ip);
+	disable_irq_nosync(the_data.pdata->irq);
+	queue_work(ip->lp_wq, &sensor_irq_work);
+
 	return IRQ_HANDLED;
 }
 
@@ -86,9 +101,10 @@ static int capella_cm3602_enable(struct capella_cm3602_data *data)
 	IPS("%s\n", __func__);
 	if (data->enabled) {
 		DPS("%s: already enabled\n", __func__);
-	return 0;
-}
+		return 0;
+	}
 
+	blocking_notifier_call_chain(&psensor_notifier_list, 1, NULL);
 	/* dummy report */
 	input_report_abs(data->input_dev, ABS_DISTANCE, -1);
 	input_sync(data->input_dev);
@@ -133,6 +149,7 @@ static int capella_cm3602_disable(struct capella_cm3602_data *data)
 	if (rc < 0)
 		return rc;
 	data->pdata->power(PS_PWR_ON, 0);
+	blocking_notifier_call_chain(&psensor_notifier_list, 0, NULL);
 	data->enabled = 0;
 
 	input_event(data->input_dev, EV_SYN, SYN_CONFIG, 0);
@@ -276,6 +293,14 @@ static int capella_cm3602_probe(struct platform_device *pdev)
 		rc = -ENOMEM;
 		goto done;
 	}
+
+	ip->lp_wq = create_singlethread_workqueue("cm3602_wq");
+	if (!ip->lp_wq) {
+		EPS("%s: can't create workqueue\n", __func__);
+		rc = -ENOMEM;
+		goto err_create_singlethread_workqueue;
+	}
+
 	ip->input_dev = input_dev;
 	ip->pdata = pdata;
 	input_set_drvdata(input_dev, ip);
@@ -306,9 +331,12 @@ static int capella_cm3602_probe(struct platform_device *pdev)
 		goto done;
 
 	misc_deregister(&capella_cm3602_misc);
+
 err_unregister_input_device:
 	input_unregister_device(input_dev);
 err_free_input_device:
+	destroy_workqueue(ip->lp_wq);
+err_create_singlethread_workqueue:
 	input_free_device(input_dev);
 done:
 	return rc;

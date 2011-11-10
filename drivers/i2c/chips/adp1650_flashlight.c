@@ -319,13 +319,12 @@ static void flashlight_early_suspend(struct early_suspend *handler)
 	struct adp1650_data *fl_str = container_of(handler,
 				struct adp1650_data, fl_early_suspend);
 	unsigned long flag = 0;
-	uint32_t prev_mode = fl_str->mode_status;
 	FLT_INFO_LOG("%s\n", __func__);
 
 	if (fl_str != NULL && fl_str->mode_status) {
 		turn_off();
 		spin_lock_irqsave(&fl_str->spin_lock, flag);
-		if (prev_mode == FL_MODE_FLASH) {
+		if (fl_str->mode_status == FL_MODE_FLASH) {
 			if (hrtimer_cancel(&fl_str->timer))
 				gpio_set_value(fl_str->flash, 0);
 		}
