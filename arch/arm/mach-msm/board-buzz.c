@@ -754,7 +754,7 @@ static ssize_t buzz_virtual_keys_show(struct kobject *kobj,
 			       struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf,
-		__stringify(EV_KEY) ":" __stringify(KEY_HOME)  ":16:350:32:58"
+		__stringify(EV_KEY) ":" __stringify(KEY_HOMEPAGE)  ":16:350:32:58"
 	   ":" __stringify(EV_KEY) ":" __stringify(KEY_MENU)   ":68:350:56:58"
 	   ":" __stringify(EV_KEY) ":" __stringify(KEY_BACK)   ":175:350:56:58"
 	   ":" __stringify(EV_KEY) ":" __stringify(KEY_SEARCH) ":224:350:32:58"
